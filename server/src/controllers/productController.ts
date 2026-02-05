@@ -50,11 +50,23 @@ export const getProducts: RequestHandler = async (req, res) => {
             },
         });
 
-        // Parse JSON strings back to objects
+        // Parse JSON strings back to objects (safely)
+        const safeParse = (val: any) => {
+            if (typeof val === 'string') {
+                try {
+                    return JSON.parse(val);
+                } catch (e) {
+                    return val;
+                }
+            }
+            return val;
+        };
+
         const parsedProducts = products.map((p: any) => ({
             ...p,
-            specs: p.specs ? JSON.parse(p.specs as string) : null,
-            images: p.images ? JSON.parse(p.images as string) : [],
+            specs: safeParse(p.specs),
+            images: Array.isArray(p.images) ? p.images : safeParse(p.images),
+            videos: Array.isArray(p.videos) ? p.videos : safeParse(p.videos),
         }));
 
         res.json(parsedProducts);
