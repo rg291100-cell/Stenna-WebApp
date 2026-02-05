@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export const getColors = async (req: Request, res: Response) => {
     try {
@@ -9,8 +7,9 @@ export const getColors = async (req: Request, res: Response) => {
             orderBy: { name: 'asc' }
         });
         res.json(colors);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch colors' });
+    } catch (error: any) {
+        console.error('Error fetching colors:', error);
+        res.status(500).json({ error: 'Failed to fetch colors', details: error.message });
     }
 };
 
@@ -35,7 +34,8 @@ export const createColor = async (req: Request, res: Response) => {
         });
 
         res.status(201).json(color);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to create color' });
+    } catch (error: any) {
+        console.error('Error creating color:', error);
+        res.status(500).json({ error: 'Failed to create color', details: error.message });
     }
 };

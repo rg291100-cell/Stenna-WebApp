@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export const getSetting = async (req: Request, res: Response) => {
     try {
@@ -10,8 +8,9 @@ export const getSetting = async (req: Request, res: Response) => {
             where: { key: String(key) }
         });
         res.json(setting || { key, value: '' });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch setting' });
+    } catch (error: any) {
+        console.error('Error fetching setting:', error);
+        res.status(500).json({ error: 'Failed to fetch setting', details: error.message });
     }
 };
 
@@ -27,7 +26,8 @@ export const updateSetting = async (req: Request, res: Response) => {
         });
 
         res.json(setting);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to update setting' });
+    } catch (error: any) {
+        console.error('Error updating setting:', error);
+        res.status(500).json({ error: 'Failed to update setting', details: error.message });
     }
 };
