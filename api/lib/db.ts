@@ -1,6 +1,5 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
-import { URL } from 'url';
 
 if (process.env.NODE_ENV !== 'production') {
     dotenv.config();
@@ -8,61 +7,54 @@ if (process.env.NODE_ENV !== 'production') {
 
 const { Pool } = pg;
 
-// Singleton pattern to prevent connection leaks in Vercel
+// Singleton to prevent "Too many connections" on Vercel
 let poolInstance: pg.Pool | null = null;
 
 const getPool = () => {
     if (!poolInstance) {
-        const rawConnectionString = (process.env.DATABASE_URL || '').trim();
+        const connectionString = (process.env.DATABASE_URL || '').trim().replace(/^["']|["']$/g, '');
 
-        if (!rawConnectionString) {
-            console.error('[Database] FATAL: DATABASE_URL is not defined!');
-            throw new Error('DATABASE_URL is missing');
+        if (!connectionString) {
+            throw new Error('DATABASE_URL is missing in environment variables');
         }
 
-        try {
-            const dbUrl = new URL(rawConnectionString.replace(/^["']|["']$/g, ''));
-
-            const config: pg.PoolConfig = {
-                host: dbUrl.hostname,
-                port: parseInt(dbUrl.port || '5432'),
-                database: dbUrl.pathname.split('/')[1] || 'postgres',
-                user: decodeURIComponent(dbUrl.username),
-                password: decodeURIComponent(dbUrl.password),
-                ssl: {
-                    rejectUnauthorized: false
-                },
-                max: 1,
-                connectionTimeoutMillis: 10000,
-                idleTimeoutMillis: 15000,
-            };
-
-            console.log(`[Database] Initializing pool for host: ${config.host}`);
-            poolInstance = new Pool(config);
-
-        } catch (err: any) {
-            console.error('[Database] Failed to parse connection string:', err.message);
-            poolInstance = new Pool({
-                connectionString: rawConnectionString.replace(/^["']|["']$/g, ''),
-                ssl: { rejectUnauthorized: false },
-                max: 1
-            });
-        }
+        // Senior Design: Use raw string to preserve all Supabase-specific query params
+        poolInstance = new Pool({
+            connectionString,
+            ssl: {
+                rejectUnauthorized: false
+            },
+            max: 1, // Crucial for Serverless (1 connection per function instance)
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 10000,
+        });
 
         poolInstance.on('error', (err) => {
             console.error('[Database] Unexpected pool error:', err);
-            poolInstance = null;
+            poolInstance = null; // Force recreation on next request
         });
     }
     return poolInstance;
 };
 
-export const query = (text: string, params?: any[]) => getPool().query(text, params);
+// Robust Query Helper with 1-time Automatic Retry
+export const query = async (text: string, params?: any[]) => {
+    const pool = getPool();
+    try {
+        return await pool.query(text, params);
+    } catch (err: any) {
+        // If connection was lost or tenant not found, try one more time
+        if (err.message.includes('terminated') || err.message.includes('Tenant')) {
+            console.warn('[Database] Connection glitch, retrying once...');
+            return await pool.query(text, params);
+        }
+        throw err;
+    }
+};
 
 export default {
     query,
     getPool,
-    // Add a getter for 'pool' to support existing controller syntax
     get pool() {
         return getPool();
     }
