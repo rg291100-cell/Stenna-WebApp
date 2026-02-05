@@ -24,6 +24,7 @@ const createConfig = (urlStr: string) => {
             },
             max: 1,
             connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 10000,
         };
     } catch (e) {
         return { connectionString: urlStr, ssl: { rejectUnauthorized: false }, max: 1 };
@@ -34,12 +35,7 @@ const getPool = () => {
     if (!poolInstance) {
         const rawUrl = (process.env.DATABASE_URL || '').trim();
         if (!rawUrl) throw new Error('DATABASE_URL is missing');
-
-        const config = createConfig(rawUrl);
-        console.log(`[Database] Connecting to: ${config.host || 'string-url'}`);
-
-        poolInstance = new Pool(config);
-
+        poolInstance = new Pool(createConfig(rawUrl));
         poolInstance.on('error', (err) => {
             console.error('[Database] Fatal pool error:', err.message);
             poolInstance = null;
@@ -48,21 +44,40 @@ const getPool = () => {
     return poolInstance;
 };
 
+// Super Resilient Query Helper
 export const query = async (text: string, params?: any[]) => {
     const pool = getPool();
     try {
         return await pool.query(text, params);
     } catch (err: any) {
-        // RESCUE LOGIC: If port 6543 is failing with Tenant error, attempt a session-mode fallback
+        console.error('[Database] Primary connection failed:', err.message);
+
+        // RECOVERY LOGIC for Supabase "Tenant not found"
         if (err.message.includes('Tenant') || err.message.includes('user not found')) {
             const rawUrl = (process.env.DATABASE_URL || '').trim();
-            if (rawUrl.includes(':6543')) {
-                console.warn('[Database] Transaction pooler rejected us. Falling back to Session Mode (5432)...');
-                const fallbackUrl = rawUrl.replace(':6543', ':5432');
-                const fallbackPool = new Pool(createConfig(fallbackUrl));
-                const result = await fallbackPool.query(text, params);
-                await fallbackPool.end();
-                return result;
+            try {
+                const dbUrl = new URL(rawUrl.replace(/^["']|["']$/g, ''));
+                const username = decodeURIComponent(dbUrl.username);
+
+                // If we have a project ref in the username (postgres.abc), try the direct host
+                if (username.includes('.')) {
+                    const projectRef = username.split('.')[1];
+                    const directHost = `${projectRef}.supabase.co`;
+
+                    console.warn(`[Database] Attempting direct connection bypass to: ${directHost}`);
+
+                    const fallbackConfig = createConfig(rawUrl);
+                    fallbackConfig.host = directHost;
+                    fallbackConfig.port = 5432;
+
+                    const fallbackPool = new Pool(fallbackConfig);
+                    const result = await fallbackPool.query(text, params);
+                    await fallbackPool.end();
+                    return result;
+                }
+            } catch (fallbackErr: any) {
+                console.error('[Database] Fallback failed:', fallbackErr.message);
+                throw err; // Throw the original error if fallback also fails
             }
         }
         throw err;

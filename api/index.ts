@@ -32,8 +32,10 @@ app.get('/api/health', checkHealth);
 app.get('/api/diag', (req, res) => {
     const url = process.env.DATABASE_URL || '';
     const masked = url.replace(/:[^:@]+@/, ':****@');
+    const user = url.split('://')[1]?.split(':')[0] || 'none';
     res.json({
         env: process.env.NODE_ENV,
+        db_user: user.includes('.') ? `${user.split('.')[0]}.****` : user,
         db_configured: !!url,
         db_host_info: masked.split('@')[1] || 'none',
         timestamp: new Date().toISOString()
