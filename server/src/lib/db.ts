@@ -7,28 +7,41 @@ if (process.env.NODE_ENV !== 'production') {
 
 const { Pool } = pg;
 
-// Strict SSL handling for Supabase direct/pooled connections
-if (process.env.NODE_ENV === 'production') {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
+// Connection Singleton for Serverless
+let pool: pg.Pool | null = null;
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    },
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000, // Increased for stability
-});
+const getPool = () => {
+    if (!pool) {
+        const connectionString = process.env.DATABASE_URL;
 
-pool.on('error', (err) => {
-    console.error('Unexpected error on idle database client', err);
-});
+        // Diagnostic Logging (Password Masked)
+        if (connectionString) {
+            const masked = connectionString.replace(/:[^:@]+@/, ':****@');
+            console.log(`[Database] Attempting connection to: ${masked}`);
+        } else {
+            console.error('[Database] FATAL: DATABASE_URL is not defined in environment!');
+        }
 
-export const query = (text: string, params?: any[]) => pool.query(text, params);
+        pool = new Pool({
+            connectionString,
+            ssl: { rejectUnauthorized: false },
+            max: 1, // Crucial for Vercel: only one connection per "awake" function
+            connectionTimeoutMillis: 5000,
+            idleTimeoutMillis: 10000,
+        });
+
+        pool.on('error', (err) => {
+            console.error('Unexpected pool error', err);
+            pool = null; // Reset pool on fatal error so next request recreates it
+        });
+    }
+    return pool;
+};
+
+// Raw query helper
+export const query = (text: string, params?: any[]) => getPool().query(text, params);
 
 export default {
-    query: (text: string, params?: any[]) => pool.query(text, params),
-    pool
+    query,
+    getPool
 };
