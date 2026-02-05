@@ -7,8 +7,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 const { Pool } = pg;
 
-// For Vercel/Supabase where self-signed certs are common
-// This is a direct override for the Node.js TLS rejection behavior
+// Strict SSL handling for Supabase direct/pooled connections
 if (process.env.NODE_ENV === 'production') {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
@@ -18,13 +17,13 @@ const pool = new Pool({
     ssl: {
         rejectUnauthorized: false
     },
-    max: 10,
+    max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 10000, // Increased for stability
 });
 
 pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
+    console.error('Unexpected error on idle database client', err);
 });
 
 export const query = (text: string, params?: any[]) => pool.query(text, params);
