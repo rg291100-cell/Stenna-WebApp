@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import prisma from '../lib/prisma.js.js';
+import prisma from '../lib/prisma.js';
 
 export const getColors = async (req: Request, res: Response) => {
     try {

@@ -2,14 +2,14 @@ import express from 'express';
 import cors from 'cors';
 
 // Explicitly use .js extensions for Vercel ESM compatibility
-import authRoutes from '../server/src/routes/auth.routes.js.js';
-import productRoutes from '../server/src/routes/product.routes.js.js';
-import collectionRoutes from '../server/src/routes/collection.routes.js.js';
-import assortmentRoutes from '../server/src/routes/assortment.routes.js.js';
-import colorRoutes from '../server/src/routes/color.routes.js.js';
-import orderRoutes from '../server/src/routes/order.routes.js.js';
-import { getSetting, updateSetting } from '../server/src/controllers/settingsController.js.js';
-import { checkHealth } from '../server/src/controllers/healthController.js.js';
+import authRoutes from '../server/src/routes/auth.routes.js';
+import productRoutes from '../server/src/routes/product.routes.js';
+import collectionRoutes from '../server/src/routes/collection.routes.js';
+import assortmentRoutes from '../server/src/routes/assortment.routes.js';
+import colorRoutes from '../server/src/routes/color.routes.js';
+import orderRoutes from '../server/src/routes/order.routes.js';
+import { getSetting, updateSetting } from '../server/src/controllers/settingsController.js';
+import { checkHealth } from '../server/src/controllers/healthController.js';
 
 const app = express();
 
