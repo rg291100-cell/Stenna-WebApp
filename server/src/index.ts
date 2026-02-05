@@ -14,10 +14,12 @@ import assortmentRoutes from './routes/assortment.routes';
 import colorRoutes from './routes/color.routes';
 import orderRoutes from './routes/order.routes';
 import { getSetting, updateSetting } from './controllers/settingsController';
+import { checkHealth } from './controllers/healthController';
 
 app.use(cors());
 app.use(express.json());
 
+app.get('/api/health', checkHealth);
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/collections', collectionRoutes);
