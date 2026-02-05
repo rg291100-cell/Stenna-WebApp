@@ -235,7 +235,7 @@ export const Catalog: React.FC = () => {
 
       {/* Luxury Editorial Grid - 2 columns for ALL categories */}
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-20 gap-y-12 transition-all duration-1000">
-        {products?.map((wp: any) => (
+        {Array.isArray(products) && products.map((wp: any) => (
           <ProductCard key={wp.id} wallpaper={wp} />
         ))}
       </div>

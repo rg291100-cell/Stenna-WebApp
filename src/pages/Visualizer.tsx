@@ -19,6 +19,7 @@ export const Visualizer: React.FC = () => {
     queryKey: ['products'],
     queryFn: async () => {
       const res = await api.get('/api/products');
+      if (!Array.isArray(res.data)) return [];
       return res.data.map((p: any) => ({
         id: p.id,
         name: p.name,

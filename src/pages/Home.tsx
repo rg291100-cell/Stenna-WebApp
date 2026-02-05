@@ -23,21 +23,21 @@ const Hero: React.FC<{ videoUrl: string, imageUrl: string }> = ({ videoUrl, imag
                 <div className="absolute inset-0 bg-black/20" />
             </div>
 
-            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 md:p-12 text-white">
-                <span className="block text-xs uppercase tracking-[0.4em] mb-4 animate-fade-in-up">The New Collection</span>
-                <h2 className="text-5xl md:text-8xl font-serif italic mb-8 animate-fade-in-up delay-200">
+            <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 md:p-12 text-white z-10">
+                <span className="block text-[10px] md:text-xs uppercase tracking-[0.4em] mb-4 animate-fade-in-up">The New Collection</span>
+                <h2 className="text-4xl md:text-8xl font-serif italic mb-8 animate-fade-in-up delay-200">
                     Curated Walls
                 </h2>
-                <div className="flex gap-6 animate-fade-in-up delay-300">
+                <div className="flex flex-col md:flex-row gap-4 md:gap-6 animate-fade-in-up delay-300 w-full md:w-auto px-6 md:px-0">
                     <Link
                         to="/catalog"
-                        className="bg-white text-black px-10 py-4 text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white transition-all shadow-lg"
+                        className="bg-white text-black px-8 py-3 md:px-10 md:py-4 text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white transition-all shadow-lg text-center w-full md:w-auto"
                     >
                         Shop Wallpaper
                     </Link>
                     <Link
                         to="/visualizer"
-                        className="border border-white backdrop-blur-sm text-white px-10 py-4 text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all"
+                        className="border border-white backdrop-blur-sm text-white px-8 py-3 md:px-10 md:py-4 text-[10px] uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all text-center w-full md:w-auto"
                     >
                         Virtual Try-On
                     </Link>
