@@ -15,9 +15,9 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -------------------------------------------------------------------------------
 -- 1. Ensure Collections Exist (Upsert)
 -------------------------------------------------------------------------------
-INSERT INTO "Collection" (id, title, description, image, "updatedAt")
+INSERT INTO "Collection" (id, title, description, image)
 VALUES 
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Ephemeral Textures', 'A study in tactile subtlety.', 'https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&q=80', NOW()),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'Ephemeral Textures', 'A study in tactile subtlety.', 'https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&q=80'),
 ('b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'Modern Minimal', 'Architectural lines meeting negative space.', 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&q=80'),
 ('c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', 'Botanical Dreams', 'Bringing the outside in with organic forms.', 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&q=80')
 ON CONFLICT (id) DO NOTHING;
