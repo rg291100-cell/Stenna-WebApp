@@ -1,18 +1,20 @@
 import express from 'express';
 import cors from 'cors';
 
-// Use local paths in the api folder to guarantee Vercel bundling
+// Routes
 import authRoutes from './routes/auth.routes.js';
 import productRoutes from './routes/product.routes.js';
 import collectionRoutes from './routes/collection.routes.js';
 import assortmentRoutes from './routes/assortment.routes.js';
 import colorRoutes from './routes/color.routes.js';
 import orderRoutes from './routes/order.routes.js';
+
+// Controllers
 import { getSetting, updateSetting } from './controllers/settingsController.js';
 import { checkHealth } from './controllers/healthController.js';
-import db from './lib/db.js';
 
 const app = express();
+
 
 app.use(cors());
 app.use(express.json());
