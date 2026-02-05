@@ -7,38 +7,39 @@ if (process.env.NODE_ENV !== 'production') {
 
 const { Pool } = pg;
 
-// Connection Singleton for Serverless
+// Singleton pattern to prevent connection leaks in Vercel
 let pool: pg.Pool | null = null;
 
 const getPool = () => {
     if (!pool) {
-        const connectionString = process.env.DATABASE_URL;
+        let connectionString = (process.env.DATABASE_URL || '').trim();
 
-        // Diagnostic Logging (Password Masked)
+        // Remove trailing quotes if accidental
+        connectionString = connectionString.replace(/^["']|["']$/g, '');
+
         if (connectionString) {
             const masked = connectionString.replace(/:[^:@]+@/, ':****@');
-            console.log(`[Database] Attempting connection to: ${masked}`);
-        } else {
-            console.error('[Database] FATAL: DATABASE_URL is not defined in environment!');
+            console.log(`[Database] Initializing pool with: ${masked}`);
         }
 
         pool = new Pool({
             connectionString,
-            ssl: { rejectUnauthorized: false },
-            max: 1, // Crucial for Vercel: only one connection per "awake" function
-            connectionTimeoutMillis: 5000,
-            idleTimeoutMillis: 10000,
+            ssl: {
+                rejectUnauthorized: false // Required for Supabase/Vercel
+            },
+            max: 1, // Serverless: One connection per lambda instance
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 15000,
         });
 
         pool.on('error', (err) => {
-            console.error('Unexpected pool error', err);
-            pool = null; // Reset pool on fatal error so next request recreates it
+            console.error('[Database] Unexpected pool error:', err);
+            pool = null; // Kill the pool so next request re-tries
         });
     }
     return pool;
 };
 
-// Raw query helper
 export const query = (text: string, params?: any[]) => getPool().query(text, params);
 
 export default {
