@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-dotenv.config();
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config();
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -33,8 +35,9 @@ app.get('/', (req, res) => {
     res.send('B2B Retailer Platform API');
 });
 
-// Conditional listen for local dev, export for Vercel
-if (require.main === module) {
+// For Vercel, we export the app. Local dev uses separate logic usually.
+// But we can keep a simple listen if env is NOT production
+if (process.env.NODE_ENV !== 'production' && process.env.RUN_LOCAL === 'true') {
     app.listen(port, () => {
         console.log(`Server is running on port ${port}`);
     });
