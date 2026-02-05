@@ -1,20 +1,31 @@
 import express from 'express';
 import cors from 'cors';
 
-// Explicitly use .js extensions for Vercel ESM compatibility
-import authRoutes from '../server/src/routes/auth.routes.js';
-import productRoutes from '../server/src/routes/product.routes.js';
-import collectionRoutes from '../server/src/routes/collection.routes.js';
-import assortmentRoutes from '../server/src/routes/assortment.routes.js';
-import colorRoutes from '../server/src/routes/color.routes.js';
-import orderRoutes from '../server/src/routes/order.routes.js';
-import { getSetting, updateSetting } from '../server/src/controllers/settingsController.js';
-import { checkHealth } from '../server/src/controllers/healthController.js';
+// Use local paths in the api folder to guarantee Vercel bundling
+import authRoutes from './routes/auth.routes.js';
+import productRoutes from './routes/product.routes.js';
+import collectionRoutes from './routes/collection.routes.js';
+import assortmentRoutes from './routes/assortment.routes.js';
+import colorRoutes from './routes/color.routes.js';
+import orderRoutes from './routes/order.routes.js';
+import { getSetting, updateSetting } from './controllers/settingsController.js';
+import { checkHealth } from './controllers/healthController.js';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Global Error Handler for better diagnostics on Vercel
+app.use((err: any, req: any, res: any, next: any) => {
+    console.error('[API Error]:', err);
+    res.status(500).json({
+        status: 'error',
+        message: err.message || 'Internal Server Error',
+        code: err.code,
+        path: req.path
+    });
+});
 
 // Main API Routes
 app.get('/api/health', checkHealth);
@@ -29,7 +40,7 @@ app.use('/api/orders', orderRoutes);
 
 // Catch-all for API root
 app.get('/api', (req, res) => {
-    res.json({ message: 'Stenna API Operational' });
+    res.json({ message: 'Stenna API Operational - Unified Built' });
 });
 
 // Fallback for debugging
