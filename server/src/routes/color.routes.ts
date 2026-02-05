@@ -1,6 +1,6 @@
 import express from 'express';
-import { getColors, createColor } from '../controllers/colorController';
-import { authenticateToken, authorizeRole } from '../middleware/auth';
+import { getColors, createColor } from '../controllers/colorController.js';
+import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
