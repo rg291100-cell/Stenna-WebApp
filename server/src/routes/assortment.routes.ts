@@ -5,8 +5,8 @@ import {
     getAssortmentById,
     updateAssortment,
     deleteAssortment
-} from '../controllers/assortmentController.js';
-import { authenticateToken } from '../middleware/auth.js';
+} from '../controllers/assortmentController.js.js';
+import { authenticateToken } from '../middleware/auth.js.js';
 
 const router = express.Router();
 
