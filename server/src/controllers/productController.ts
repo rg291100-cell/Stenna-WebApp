@@ -58,9 +58,13 @@ export const getProducts: RequestHandler = async (req, res) => {
         }));
 
         res.json(parsedProducts);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching products:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({
+            message: 'Internal server error',
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 
