@@ -1,6 +1,17 @@
 import { Request, Response, RequestHandler } from 'express';
 import prisma from '../lib/prisma';
 
+const safeParse = (val: any) => {
+    if (typeof val === 'string') {
+        try {
+            return JSON.parse(val);
+        } catch (e) {
+            return val;
+        }
+    }
+    return val;
+};
+
 export const getProducts: RequestHandler = async (req, res) => {
     try {
         const { category, collectionId, search, minPrice, maxPrice } = req.query;
@@ -50,18 +61,6 @@ export const getProducts: RequestHandler = async (req, res) => {
             },
         });
 
-        // Parse JSON strings back to objects (safely)
-        const safeParse = (val: any) => {
-            if (typeof val === 'string') {
-                try {
-                    return JSON.parse(val);
-                } catch (e) {
-                    return val;
-                }
-            }
-            return val;
-        };
-
         const parsedProducts = products.map((p: any) => ({
             ...p,
             specs: safeParse(p.specs),
@@ -103,14 +102,18 @@ export const getProductById: RequestHandler = async (req, res) => {
 
         const parsedProduct = {
             ...product,
-            specs: product.specs ? JSON.parse(product.specs as string) : null,
-            images: product.images ? JSON.parse(product.images as string) : [],
+            specs: safeParse(product.specs),
+            images: Array.isArray(product.images) ? product.images : safeParse(product.images),
+            videos: Array.isArray(product.videos) ? product.videos : safeParse(product.videos),
         };
 
         res.json(parsedProduct);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching product:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({
+            message: 'Internal server error',
+            error: error.message
+        });
     }
 };
 
