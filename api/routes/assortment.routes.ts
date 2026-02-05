@@ -6,7 +6,6 @@ import {
     updateAssortment,
     deleteAssortment
 } from '../controllers/assortmentController.js';
-
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
