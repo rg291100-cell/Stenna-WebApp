@@ -1,5 +1,5 @@
 import { Request, Response, RequestHandler } from 'express';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 const safeParse = (val: any) => {
     if (typeof val === 'string') {
