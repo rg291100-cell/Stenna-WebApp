@@ -1,5 +1,5 @@
 import { Request, Response, RequestHandler } from 'express';
-import prisma from '../lib/prisma.js';
+import db from '../lib/db.js';
 
 const safeParse = (val: any) => {
     if (typeof val === 'string') {
@@ -14,58 +14,74 @@ const safeParse = (val: any) => {
 
 export const getProducts: RequestHandler = async (req, res) => {
     try {
-        const { category, collectionId, search, minPrice, maxPrice } = req.query;
+        const { category, collectionId, search, minPrice, maxPrice, room, color, theme } = req.query;
 
-        const where: any = {};
+        let queryText = `
+            SELECT p.*, c.title as "collectionTitle", c.description as "collectionDescription"
+            FROM "Product" p
+            LEFT JOIN "Collection" c ON p."collectionId" = c.id
+            WHERE 1=1
+        `;
+        const params: any[] = [];
+        let paramIndex = 1;
 
         if (category) {
-            where.category = category as string;
+            queryText += ` AND p.category = $${paramIndex++}`;
+            params.push(category);
         }
 
         if (collectionId) {
-            where.collectionId = collectionId as string;
+            queryText += ` AND p."collectionId" = $${paramIndex++}`;
+            params.push(collectionId);
         }
 
         if (search) {
-            where.OR = [
-                { name: { contains: search as string, mode: 'insensitive' } },
-                { description: { contains: search as string, mode: 'insensitive' } },
-            ];
+            queryText += ` AND (p.name ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex})`;
+            params.push(`%${search}%`);
+            paramIndex++;
         }
 
-        if (minPrice || maxPrice) {
-            where.price = {};
-            if (minPrice) where.price.gte = parseFloat(minPrice as string);
-            if (maxPrice) where.price.lte = parseFloat(maxPrice as string);
+        if (minPrice) {
+            queryText += ` AND p.price >= $${paramIndex++}`;
+            params.push(parseFloat(minPrice as string));
         }
 
-        // Filter Logic
-        const { room, color, theme } = req.query;
+        if (maxPrice) {
+            queryText += ` AND p.price <= $${paramIndex++}`;
+            params.push(parseFloat(maxPrice as string));
+        }
 
         if (room) {
-            where.room = { in: Array.isArray(room) ? (room as string[]) : [room as string] };
+            const rooms = Array.isArray(room) ? room : [room];
+            queryText += ` AND p.room = ANY($${paramIndex++})`;
+            params.push(rooms);
         }
 
         if (color) {
-            where.color = { in: Array.isArray(color) ? (color as string[]) : [color as string] };
+            const colors = Array.isArray(color) ? color : [color];
+            queryText += ` AND p.color = ANY($${paramIndex++})`;
+            params.push(colors);
         }
 
         if (theme) {
-            where.theme = { in: Array.isArray(theme) ? (theme as string[]) : [theme as string] };
+            const themes = Array.isArray(theme) ? theme : [theme];
+            queryText += ` AND p.theme = ANY($${paramIndex++})`;
+            params.push(themes);
         }
 
-        const products = await prisma.product.findMany({
-            where,
-            include: {
-                collection: true,
-            },
-        });
+        const result = await db.query(queryText, params);
+        const products = result.rows;
 
         const parsedProducts = products.map((p: any) => ({
             ...p,
             specs: safeParse(p.specs),
             images: Array.isArray(p.images) ? p.images : safeParse(p.images),
             videos: Array.isArray(p.videos) ? p.videos : safeParse(p.videos),
+            collection: p.collectionId ? {
+                id: p.collectionId,
+                title: p.collectionTitle,
+                description: p.collectionDescription
+            } : null
         }));
 
         res.json(parsedProducts);
@@ -88,12 +104,14 @@ export const getProductById: RequestHandler = async (req, res) => {
             return;
         }
 
-        const product = await prisma.product.findUnique({
-            where: { id: id as string },
-            include: {
-                collection: true,
-            },
-        });
+        const queryText = `
+            SELECT p.*, c.title as "collectionTitle", c.description as "collectionDescription"
+            FROM "Product" p
+            LEFT JOIN "Collection" c ON p."collectionId" = c.id
+            WHERE p.id = $1
+        `;
+        const result = await db.query(queryText, [id]);
+        const product = result.rows[0];
 
         if (!product) {
             res.status(404).json({ message: 'Product not found' });
@@ -105,6 +123,11 @@ export const getProductById: RequestHandler = async (req, res) => {
             specs: safeParse(product.specs),
             images: Array.isArray(product.images) ? product.images : safeParse(product.images),
             videos: Array.isArray(product.videos) ? product.videos : safeParse(product.videos),
+            collection: product.collectionId ? {
+                id: product.collectionId,
+                title: product.collectionTitle,
+                description: product.collectionDescription
+            } : null
         };
 
         res.json(parsedProduct);
@@ -117,21 +140,30 @@ export const getProductById: RequestHandler = async (req, res) => {
     }
 };
 
-// Admin only: Create Product
 export const createProduct: RequestHandler = async (req, res) => {
     try {
-        const productData = {
-            ...req.body,
-            specs: req.body.specs ? JSON.stringify(req.body.specs) : null,
-            images: req.body.images ? JSON.stringify(req.body.images) : JSON.stringify([]),
-        };
+        const { name, sku, price, description, specs, images, videos, category, quantity, room, color, theme, collectionId } = req.body;
 
-        const product = await prisma.product.create({
-            data: productData,
-        });
-        res.status(201).json(product);
-    } catch (error) {
+        const queryText = `
+            INSERT INTO "Product" (
+                id, name, sku, price, description, specs, images, videos, category, quantity, room, color, theme, "collectionId"
+            ) VALUES (
+                gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+            ) RETURNING *
+        `;
+
+        const params = [
+            name, sku, price, description,
+            specs ? JSON.stringify(specs) : null,
+            images ? JSON.stringify(images) : JSON.stringify([]),
+            videos ? JSON.stringify(videos) : null,
+            category, quantity || 0, room, color, theme, collectionId
+        ];
+
+        const result = await db.query(queryText, params);
+        res.status(201).json(result.rows[0]);
+    } catch (error: any) {
         console.error('Error creating product:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Internal server error', error: error.message });
     }
 };

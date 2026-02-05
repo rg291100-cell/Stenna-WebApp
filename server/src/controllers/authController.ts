@@ -1,5 +1,5 @@
 import { Request, Response, RequestHandler } from 'express';
-import prisma from '../lib/prisma.js';
+import db from '../lib/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -9,22 +9,19 @@ export const register: RequestHandler = async (req, res) => {
     try {
         const { email, password, companyName, role } = req.body;
 
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
+        const existingUserResult = await db.query('SELECT * FROM "User" WHERE email = $1', [email]);
+        if (existingUserResult.rows.length > 0) {
             res.status(400).json({ message: 'User already exists' });
             return;
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await prisma.user.create({
-            data: {
-                email,
-                password: hashedPassword,
-                companyName,
-                role: role || 'RETAILER', // Default role
-            },
-        });
+        const newUserResult = await db.query(
+            'INSERT INTO "User" (id, email, password, "companyName", role, "updatedAt") VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW()) RETURNING *',
+            [email, hashedPassword, companyName, role || 'RETAILER']
+        );
+        const user = newUserResult.rows[0];
 
         const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
 
@@ -39,7 +36,9 @@ export const login: RequestHandler = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const userResult = await db.query('SELECT * FROM "User" WHERE email = $1', [email]);
+        const user = userResult.rows[0];
+
         if (!user) {
             res.status(400).json({ message: 'Invalid credentials' });
             return;
