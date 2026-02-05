@@ -10,37 +10,30 @@ import colorRoutes from './routes/color.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import { getSetting, updateSetting } from './controllers/settingsController.js';
 import { checkHealth } from './controllers/healthController.js';
+import db from './lib/db.js';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Global Error Handler for better diagnostics on Vercel
-app.use((err: any, req: any, res: any, next: any) => {
-    console.error('[API Error]:', err);
-    res.status(500).json({
-        status: 'error',
-        message: err.message || 'Internal Server Error',
-        code: err.code,
-        path: req.path
-    });
-});
-
 // Main API Routes
 app.get('/api/health', checkHealth);
 app.get('/api/diag', (req, res) => {
-    const url = process.env.DATABASE_URL || '';
-    const masked = url.replace(/:[^:@]+@/, ':****@');
-    const user = url.split('://')[1]?.split(':')[0] || 'none';
+    // Show what db.ts is doing
+    const activeUrl = (process.env.DATABASE_URL || '').trim();
+    const masked = activeUrl.replace(/:[^:@]+@/, ':****@');
+
+    // We can't easily see the Modified string from here without exposing it or exporting it
     res.json({
         env: process.env.NODE_ENV,
-        db_user: user.includes('.') ? `${user.split('.')[0]}.****` : user,
-        db_configured: !!url,
-        db_host_info: masked.split('@')[1] || 'none',
-        timestamp: new Date().toISOString()
+        db_configured: !!activeUrl,
+        raw_host: masked.split('@')[1] || 'none',
+        timestamp: new Date().toISOString(),
+        help: "Check /api/health for direct DB test"
     });
 });
+
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/collections', collectionRoutes);
@@ -58,6 +51,16 @@ app.get('/api', (req, res) => {
 // Fallback for debugging
 app.get('/', (req, res) => {
     res.json({ status: 'alive', info: 'B2B API Entry Point' });
+});
+
+// Global Error Handler
+app.use((err: any, req: any, res: any, next: any) => {
+    console.error('[API Error]:', err);
+    res.status(500).json({
+        status: 'error',
+        message: err.message || 'Internal Server Error',
+        code: err.code
+    });
 });
 
 export default app;
