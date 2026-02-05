@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import {
     createAssortment,
     getAssortments,
@@ -8,9 +8,9 @@ import {
 } from '../controllers/assortmentController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-const router = express.Router();
+const router = Router();
 
-router.use(authenticateToken); // All assortment routes require auth
+router.use(authenticateToken);
 
 router.post('/', createAssortment);
 router.get('/', getAssortments);

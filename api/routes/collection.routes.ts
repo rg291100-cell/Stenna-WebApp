@@ -1,8 +1,10 @@
-import express from 'express';
-import { getCollections, getCollectionById } from '../controllers/collectionController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { Router } from 'express';
+import {
+    getCollections,
+    getCollectionById
+} from '../controllers/collectionController.js';
 
-const router = express.Router();
+const router = Router();
 
 router.get('/', getCollections);
 router.get('/:id', getCollectionById);

@@ -1,8 +1,15 @@
-import express from 'express';
-import { getProducts, getProductById, createProduct } from '../controllers/productController.js';
-import { authenticateToken, authorizeRole } from '../middleware/auth.js';
+import { Router } from 'express';
+import {
+    getProducts,
+    getProductById,
+    createProduct
+} from '../controllers/productController.js';
+import {
+    authenticateToken,
+    authorizeRole
+} from '../middleware/auth.js';
 
-const router = express.Router();
+const router = Router();
 
 router.get('/', getProducts);
 router.get('/:id', getProductById);
