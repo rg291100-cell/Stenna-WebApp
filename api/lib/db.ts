@@ -9,10 +9,10 @@ if (process.env.NODE_ENV !== 'production') {
 const { Pool } = pg;
 
 // Singleton pattern to prevent connection leaks in Vercel
-let pool: pg.Pool | null = null;
+let poolInstance: pg.Pool | null = null;
 
 const getPool = () => {
-    if (!pool) {
+    if (!poolInstance) {
         const rawConnectionString = (process.env.DATABASE_URL || '').trim();
 
         if (!rawConnectionString) {
@@ -21,8 +21,6 @@ const getPool = () => {
         }
 
         try {
-            // Senior Approach: Parse the URL and create a config object
-            // This avoids all encoding issues with '@' or special characters
             const dbUrl = new URL(rawConnectionString.replace(/^["']|["']$/g, ''));
 
             const config: pg.PoolConfig = {
@@ -39,30 +37,33 @@ const getPool = () => {
                 idleTimeoutMillis: 15000,
             };
 
-            console.log(`[Database] Initializing pool for host: ${config.host} (Port: ${config.port})`);
-            pool = new Pool(config);
+            console.log(`[Database] Initializing pool for host: ${config.host}`);
+            poolInstance = new Pool(config);
 
         } catch (err: any) {
             console.error('[Database] Failed to parse connection string:', err.message);
-            // Fallback to raw string if parsing fails, but this is unlikely
-            pool = new Pool({
+            poolInstance = new Pool({
                 connectionString: rawConnectionString.replace(/^["']|["']$/g, ''),
                 ssl: { rejectUnauthorized: false },
                 max: 1
             });
         }
 
-        pool.on('error', (err) => {
+        poolInstance.on('error', (err) => {
             console.error('[Database] Unexpected pool error:', err);
-            pool = null;
+            poolInstance = null;
         });
     }
-    return pool;
+    return poolInstance;
 };
 
 export const query = (text: string, params?: any[]) => getPool().query(text, params);
 
 export default {
     query,
-    getPool
+    getPool,
+    // Add a getter for 'pool' to support existing controller syntax
+    get pool() {
+        return getPool();
+    }
 };
