@@ -6,9 +6,11 @@ if (process.env.NODE_ENV !== 'production') {
     dotenv.config();
 }
 
+// Global override for self-signed certs in this specific environment
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const { Pool } = pg;
 
-// Singleton pattern
 let poolInstance: pg.Pool | null = null;
 
 const getPool = () => {
@@ -17,35 +19,34 @@ const getPool = () => {
 
         if (!connectionString) throw new Error('DATABASE_URL is missing');
 
-        // Senior Intelligence: Supabase Pooler Hardening
+        // Force identification for Supabase Pooler
         if (connectionString.includes('pooler.supabase.com')) {
             const url = new URL(connectionString);
             const user = decodeURIComponent(url.username);
 
-            // 1. Force Port 6543 if it's the pooler (much more stable for identification)
+            // Force identification port
             if (connectionString.includes(':5432')) {
-                console.warn('[Database] Correcting port 5432 -> 6543 for Supabase Pooler');
                 connectionString = connectionString.replace(':5432', ':6543');
             }
 
-            // 2. Ensure project identification parameter is present
+            // Inject Mandatory Project ID
             if (user.includes('.') && !connectionString.includes('options=project')) {
                 const projectRef = user.split('.')[1];
                 const separator = connectionString.includes('?') ? '&' : '?';
                 connectionString += `${separator}options=project%3D${projectRef}`;
-                console.log(`[Database] Injected project ID: ${projectRef}`);
             }
         }
 
-        console.log(`[Database] Initializing Pool...`);
+        // REMOVE sslmode from the string to prevent it from overriding our ssl object logic
+        connectionString = connectionString.replace(/[&?]sslmode=[^&]*/g, '');
+
         poolInstance = new Pool({
             connectionString,
             ssl: {
-                rejectUnauthorized: false
+                rejectUnauthorized: false // This finally takes priority
             },
-            max: 1, // Crucial for Vercel
+            max: 1,
             connectionTimeoutMillis: 15000,
-            idleTimeoutMillis: 15000,
         });
 
         poolInstance.on('error', (err) => {
@@ -61,12 +62,9 @@ export const query = async (text: string, params?: any[]) => {
         const pool = getPool();
         return await pool.query(text, params);
     } catch (err: any) {
-        console.error('[Database] Query failed:', err.message);
-
-        // Final desperate attempt: if it's a connection error, try one immediate retry
-        if (err.message.includes('Tenant') || err.message.includes('terminated') || err.message.includes('password')) {
-            console.log('[Database] Identification or Auth failed. Attempting clean retry...');
-            poolInstance = null; // Reset pool
+        // Handle common transients
+        if (err.message.includes('terminated') || err.message.includes('Tenant')) {
+            poolInstance = null;
             const pool = getPool();
             return await pool.query(text, params);
         }
