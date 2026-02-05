@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  role        String   @default("RETAILER")
+  companyName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  assortments Assortment[]
+  orders      Order[]
+}
+
+model Product {
+  id          String          @id @default(uuid())
+  name        String
+  sku         String          @unique
+  price       Decimal
+  quantity    Int             @default(0) // Replaces moq
+  description String
+  specs       String?
+  images      String // JSON stringified array of strings
+  videos      String? // JSON stringified array of strings
+  category    String
+  
+  weight      String?
+  material    String?
+  rollLength  String?
+  rollWidth   String?
+  designStyle String?
+  
+  room        String?
+  color       String?
+  theme       String?
+  
+  collectionId String?
+  collection   Collection? @relation(fields: [collectionId], references: [id])
+  
+  assortmentItems AssortmentItem[]
+  orderItems      OrderItem[]
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+}
+
+model Collection {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  image       String
+  products    Product[]
+}
+
+model Assortment {
+  id        String   @id @default(uuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  items     AssortmentItem[]
+}
+
+model AssortmentItem {
+  id           String     @id @default(uuid())
+  assortmentId String
+  assortment   Assortment @relation(fields: [assortmentId], references: [id])
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  type      String
+  status    String      @default("PENDING")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+}
+
+model Color {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  hexCode   String?
+  createdAt DateTime @default(now())
+}

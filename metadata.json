@@ -1,0 +1,7 @@
+{
+  "name": "Stenna Wallpaper - Luxury Editorial Catalog",
+  "description": "A high-end, Zara-inspired wallpaper catalog with a 'Try-It-On' visualizer, editorial layouts, and premium minimalist design.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
