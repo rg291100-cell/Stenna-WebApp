@@ -29,7 +29,7 @@ const Header: React.FC<{ onMenuOpen: () => void }> = ({ onMenuOpen }) => {
         </button>
       </div>
 
-      <Link to="/" className="flex-1 flex justify-center group ml-32">
+      <Link to="/" className="flex-1 flex justify-center group">
         <h1 className={`text-4xl md:text-5xl font-serif tracking-tight font-bold transition-all duration-500 ${isHome && !isScrolled ? 'tracking-widest' : ''}`}>
           STENNA
         </h1>
