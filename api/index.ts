@@ -29,6 +29,16 @@ app.use((err: any, req: any, res: any, next: any) => {
 
 // Main API Routes
 app.get('/api/health', checkHealth);
+app.get('/api/diag', (req, res) => {
+    const url = process.env.DATABASE_URL || '';
+    const masked = url.replace(/:[^:@]+@/, ':****@');
+    res.json({
+        env: process.env.NODE_ENV,
+        db_configured: !!url,
+        db_host_info: masked.split('@')[1] || 'none',
+        timestamp: new Date().toISOString()
+    });
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/collections', collectionRoutes);
