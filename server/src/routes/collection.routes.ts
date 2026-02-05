@@ -1,6 +1,6 @@
 import express from 'express';
-import { getCollections, getCollectionById } from '../controllers/collectionController.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { getCollections, getCollectionById } from '../controllers/collectionController';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 

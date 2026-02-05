@@ -1,5 +1,5 @@
 import { Request, Response, RequestHandler } from 'express';
-import prisma from '../lib/prisma.js';
+import prisma from '../lib/prisma';
 
 interface AuthRequest extends Request {
     user?: {

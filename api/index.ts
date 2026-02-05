@@ -9,14 +9,14 @@ if (process.env.NODE_ENV !== 'production') {
 const app = express();
 
 // Since we are in the 'api' directory, we need to go up one level to reach 'server/src'
-import authRoutes from '../server/src/routes/auth.routes.js';
-import productRoutes from '../server/src/routes/product.routes.js';
-import collectionRoutes from '../server/src/routes/collection.routes.js';
-import assortmentRoutes from '../server/src/routes/assortment.routes.js';
-import colorRoutes from '../server/src/routes/color.routes.js';
-import orderRoutes from '../server/src/routes/order.routes.js';
-import { getSetting, updateSetting } from '../server/src/controllers/settingsController.js';
-import { checkHealth } from '../server/src/controllers/healthController.js';
+import authRoutes from '../server/src/routes/auth.routes';
+import productRoutes from '../server/src/routes/product.routes';
+import collectionRoutes from '../server/src/routes/collection.routes';
+import assortmentRoutes from '../server/src/routes/assortment.routes';
+import colorRoutes from '../server/src/routes/color.routes';
+import orderRoutes from '../server/src/routes/order.routes';
+import { getSetting, updateSetting } from '../server/src/controllers/settingsController';
+import { checkHealth } from '../server/src/controllers/healthController';
 
 app.use(cors());
 app.use(express.json());

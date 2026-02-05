@@ -9,14 +9,14 @@ if (process.env.NODE_ENV !== 'production') {
 const app = express();
 const port = process.env.PORT || 3000;
 
-import authRoutes from './routes/auth.routes.js';
-import productRoutes from './routes/product.routes.js';
-import collectionRoutes from './routes/collection.routes.js';
-import assortmentRoutes from './routes/assortment.routes.js';
-import colorRoutes from './routes/color.routes.js';
-import orderRoutes from './routes/order.routes.js';
-import { getSetting, updateSetting } from './controllers/settingsController.js';
-import { checkHealth } from './controllers/healthController.js';
+import authRoutes from './routes/auth.routes';
+import productRoutes from './routes/product.routes';
+import collectionRoutes from './routes/collection.routes';
+import assortmentRoutes from './routes/assortment.routes';
+import colorRoutes from './routes/color.routes';
+import orderRoutes from './routes/order.routes';
+import { getSetting, updateSetting } from './controllers/settingsController';
+import { checkHealth } from './controllers/healthController';
 
 app.use(cors());
 app.use(express.json());
