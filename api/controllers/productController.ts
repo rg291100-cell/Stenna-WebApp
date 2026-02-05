@@ -1,5 +1,5 @@
 import { Request, Response, RequestHandler } from 'express';
-import { query } from '../lib/db.js';
+import db from '../lib/db.js';
 
 const safeParse = (val: any) => {
     if (typeof val === 'string') {
@@ -13,47 +13,68 @@ const safeParse = (val: any) => {
 };
 
 export const getProducts: RequestHandler = async (req, res) => {
-    try {
-        const { category, collectionId, search, minPrice, maxPrice, room, color, theme } = req.query;
+    const result = await db.query(`
+    SELECT p.*, c.title as "collectionTitle", c.description as "collectionDescription"
+    FROM "Product" p
+    LEFT JOIN "Collection" c ON p."collectionId" = c.id
+  `);
 
-        let sql = `
-      SELECT p.*, c.title AS "collectionTitle", c.description AS "collectionDescription"
-      FROM "Product" p
-      LEFT JOIN "Collection" c ON p."collectionId" = c.id
-      WHERE 1=1
-    `;
+    const products = result.rows.map((p: any) => ({
+        ...p,
+        specs: safeParse(p.specs),
+        images: safeParse(p.images),
+        videos: safeParse(p.videos),
+        collection: p.collectionId
+            ? { id: p.collectionId, title: p.collectionTitle, description: p.collectionDescription }
+            : null
+    }));
 
-        const params: any[] = [];
-        let i = 1;
+    res.json(products);
+};
 
-        if (category) { sql += ` AND p.category = $${i++}`; params.push(category); }
-        if (collectionId) { sql += ` AND p."collectionId" = $${i++}`; params.push(collectionId); }
-        if (search) {
-            sql += ` AND (p.name ILIKE $${i} OR p.description ILIKE $${i})`;
-            params.push(`%${search}%`);
-            i++;
-        }
-        if (minPrice) { sql += ` AND p.price >= $${i++}`; params.push(Number(minPrice)); }
-        if (maxPrice) { sql += ` AND p.price <= $${i++}`; params.push(Number(maxPrice)); }
-        if (room) { sql += ` AND p.room = ANY($${i++})`; params.push([].concat(room as any)); }
-        if (color) { sql += ` AND p.color = ANY($${i++})`; params.push([].concat(color as any)); }
-        if (theme) { sql += ` AND p.theme = ANY($${i++})`; params.push([].concat(theme as any)); }
+export const getProductById: RequestHandler = async (req, res) => {
+    const { id } = req.params;
+    const result = await db.query(`SELECT * FROM "Product" WHERE id = $1`, [id]);
 
-        const result = await query(sql, params);
-
-        res.json(result.rows.map(p => ({
-            ...p,
-            specs: safeParse(p.specs),
-            images: safeParse(p.images),
-            videos: safeParse(p.videos),
-            collection: p.collectionId ? {
-                id: p.collectionId,
-                title: p.collectionTitle,
-                description: p.collectionDescription
-            } : null
-        })));
-    } catch (error: any) {
-        console.error('Error fetching products:', error);
-        res.status(500).json({ message: 'Internal server error' });
+    if (!result.rows.length) {
+        return res.status(404).json({ message: 'Product not found' });
     }
+
+    const p = result.rows[0];
+    res.json({
+        ...p,
+        specs: safeParse(p.specs),
+        images: safeParse(p.images),
+        videos: safeParse(p.videos),
+    });
+};
+
+export const createProduct: RequestHandler = async (req, res) => {
+    const {
+        name, sku, price, description,
+        specs, images, videos,
+        category, quantity, room, color, theme, collectionId
+    } = req.body;
+
+    const result = await db.query(
+        `
+    INSERT INTO "Product" (
+      id, name, sku, price, description, specs, images, videos,
+      category, quantity, room, color, theme, "collectionId"
+    )
+    VALUES (
+      gen_random_uuid(), $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+    )
+    RETURNING *
+    `,
+        [
+            name, sku, price, description,
+            specs ? JSON.stringify(specs) : null,
+            images ? JSON.stringify(images) : '[]',
+            videos ? JSON.stringify(videos) : null,
+            category, quantity || 0, room, color, theme, collectionId
+        ]
+    );
+
+    res.status(201).json(result.rows[0]);
 };

@@ -4,10 +4,8 @@ import {
     getProductById,
     createProduct
 } from '../controllers/productController.js';
-import {
-    authenticateToken,
-    authorizeRole
-} from '../middleware/auth.js';
+
+import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 
 const router = Router();
 
