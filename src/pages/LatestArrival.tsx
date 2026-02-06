@@ -9,7 +9,7 @@ const LatestArrival: React.FC = () => {
     const { data: products, isLoading, error } = useQuery({
         queryKey: ['products', 'latest'],
         queryFn: async () => {
-            const response = await api.get('/api/products');
+            const response = await api.get('/products');
             // For "Latest", we might want to slice the array or filter, but for now just show all or first 6
             return response.data.slice(0, 6);
         }
