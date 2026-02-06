@@ -1,16 +1,16 @@
-import { Request, Response, RequestHandler } from 'express';
+import { RequestHandler } from 'express';
 import { query } from '../lib/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
+const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const register: RequestHandler = async (req, res) => {
     try {
         const { email, password, companyName, role } = req.body;
 
         const existing = await query(
-            'SELECT id FROM "User" WHERE email = $1',
+            `SELECT id FROM "User" WHERE email = $1`,
             [email]
         );
 
@@ -21,14 +21,22 @@ export const register: RequestHandler = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const result = await query(
-            `INSERT INTO "User" (id, email, password, "companyName", role, "updatedAt")
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
-       RETURNING *`,
-            [email, hashedPassword, companyName, role || 'RETAILER']
+            `
+            INSERT INTO "User"
+            (id, email, password, "companyName", role, "updatedAt")
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
+            RETURNING *
+            `,
+            [email, hashedPassword, companyName, role ?? 'RETAILER']
         );
 
         const user = result.rows[0];
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+
+        const token = jwt.sign(
+            { id: user.id, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '1d' }
+        );
 
         res.status(201).json({
             token,
@@ -36,11 +44,11 @@ export const register: RequestHandler = async (req, res) => {
                 id: user.id,
                 email: user.email,
                 role: user.role,
-                companyName: user.companyName
-            }
+                companyName: user.companyName,
+            },
         });
-    } catch (error) {
-        console.error('Registration error:', error);
+    } catch (error: any) {
+        console.error('register error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
@@ -50,7 +58,7 @@ export const login: RequestHandler = async (req, res) => {
         const { email, password } = req.body;
 
         const result = await query(
-            'SELECT * FROM "User" WHERE email = $1',
+            `SELECT * FROM "User" WHERE email = $1`,
             [email]
         );
 
@@ -64,7 +72,11 @@ export const login: RequestHandler = async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign(
+            { id: user.id, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '1d' }
+        );
 
         res.json({
             token,
@@ -72,11 +84,11 @@ export const login: RequestHandler = async (req, res) => {
                 id: user.id,
                 email: user.email,
                 role: user.role,
-                companyName: user.companyName
-            }
+                companyName: user.companyName,
+            },
         });
-    } catch (error) {
-        console.error('Login error:', error);
+    } catch (error: any) {
+        console.error('login error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

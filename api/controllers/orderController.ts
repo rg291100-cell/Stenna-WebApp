@@ -8,20 +8,23 @@ interface AuthRequest extends Request {
 export const createOrder = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
-        if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+        if (!userId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
 
         const { type, items } = req.body;
-        if (!items?.length) {
+
+        if (!Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ message: 'Order must contain items' });
         }
 
         const orderResult = await query(
             `
-      INSERT INTO "Order" (id, "userId", type, status)
-      VALUES (gen_random_uuid(), $1, $2, 'PENDING')
-      RETURNING *
-      `,
-            [userId, type || 'SAMPLE']
+            INSERT INTO "Order" (id, "userId", type, status)
+            VALUES (gen_random_uuid(), $1, $2, 'PENDING')
+            RETURNING *
+            `,
+            [userId, type ?? 'SAMPLE']
         );
 
         const order = orderResult.rows[0];
@@ -29,11 +32,11 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         for (const item of items) {
             await query(
                 `
-        INSERT INTO "OrderItem"
-        (id, "orderId", "productId", quantity)
-        VALUES (gen_random_uuid(), $1, $2, $3)
-        `,
-                [order.id, item.productId, item.quantity || 1]
+                INSERT INTO "OrderItem"
+                (id, "orderId", "productId", quantity)
+                VALUES (gen_random_uuid(), $1, $2, $3)
+                `,
+                [order.id, item.productId, item.quantity ?? 1]
             );
         }
 
@@ -47,10 +50,17 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 export const getOrders = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
-        if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+        if (!userId) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
 
         const result = await query(
-            `SELECT * FROM "Order" WHERE "userId" = $1 ORDER BY "createdAt" DESC`,
+            `
+            SELECT *
+            FROM "Order"
+            WHERE "userId" = $1
+            ORDER BY "createdAt" DESC
+            `,
             [userId]
         );
 

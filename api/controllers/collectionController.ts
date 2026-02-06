@@ -3,7 +3,9 @@ import { query } from '../lib/db.js';
 
 export const getCollections = async (_req: Request, res: Response) => {
     try {
-        const result = await query(`SELECT * FROM "Collection" ORDER BY title ASC`);
+        const result = await query(
+            `SELECT * FROM "Collection" ORDER BY title ASC`
+        );
         res.json(result.rows);
     } catch (error: any) {
         console.error('getCollections error:', error);

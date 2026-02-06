@@ -34,19 +34,16 @@ app.get('/api/health', checkHealth);
 app.get('/api/db-test', async (_req, res) => {
     try {
         const result = await query('SELECT 1 AS ok');
-        res.json({
-            db: 'connected',
-            result: result.rows
-        });
+        res.json({ success: true, result: result.rows });
     } catch (err: any) {
-        console.error('DB TEST ERROR:', err);
+        console.error('DB TEST FAILED:', err);
         res.status(500).json({
-            db: 'failed',
-            error: err.message,
-            stack: err.stack
+            success: false,
+            message: err.message,
         });
     }
 });
+
 
 /**
  * Environment diagnostics

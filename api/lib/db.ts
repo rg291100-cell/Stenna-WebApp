@@ -1,11 +1,10 @@
 // api/lib/db.ts
-import pg from 'pg';
+import pkg from 'pg';
+const { Pool } = pkg;
 
-const { Pool } = pg;
+let pool: Pool | null = null;
 
-let pool: pg.Pool | null = null;
-
-function getPool(): pg.Pool {
+function getDb(): Pool {
     if (!pool) {
         const url = process.env.DATABASE_URL;
 
@@ -17,14 +16,14 @@ function getPool(): pg.Pool {
 
         pool = new Pool({
             connectionString: url,
-            ssl: { rejectUnauthorized: false }, // REQUIRED for Supabase
-            max: 1, // REQUIRED for Vercel
+            ssl: { rejectUnauthorized: false },
+            max: 1,
             idleTimeoutMillis: 10000,
             connectionTimeoutMillis: 10000,
         });
 
         pool.on('error', (err) => {
-            console.error('[DB] Pool error', err);
+            console.error('[DB] Pool error:', err);
             pool = null;
         });
     }
@@ -33,6 +32,6 @@ function getPool(): pg.Pool {
 }
 
 export async function query(text: string, params?: any[]) {
-    const pool = getPool();
-    return pool.query(text, params);
+    const db = getDb();
+    return db.query(text, params);
 }

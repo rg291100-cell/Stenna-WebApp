@@ -11,11 +11,11 @@ export const createAssortment = async (req: Request, res: Response) => {
 
         const result = await query(
             `
-      INSERT INTO "Assortment" (id, name, description)
-      VALUES (gen_random_uuid(), $1, $2)
-      RETURNING *
-      `,
-            [name, description || null]
+            INSERT INTO "Assortment" (id, name, description)
+            VALUES (gen_random_uuid(), $1, $2)
+            RETURNING *
+            `,
+            [name, description ?? null]
         );
 
         const assortment = result.rows[0];
@@ -24,9 +24,10 @@ export const createAssortment = async (req: Request, res: Response) => {
             for (const productId of products) {
                 await query(
                     `
-          INSERT INTO "AssortmentProduct" (id, "assortmentId", "productId")
-          VALUES (gen_random_uuid(), $1, $2)
-          `,
+                    INSERT INTO "AssortmentProduct"
+                    (id, "assortmentId", "productId")
+                    VALUES (gen_random_uuid(), $1, $2)
+                    `,
                     [assortment.id, productId]
                 );
             }
@@ -41,12 +42,9 @@ export const createAssortment = async (req: Request, res: Response) => {
 
 export const getAssortments = async (_req: Request, res: Response) => {
     try {
-        const result = await query(`
-      SELECT *
-      FROM "Assortment"
-      ORDER BY "createdAt" DESC
-    `);
-
+        const result = await query(
+            `SELECT * FROM "Assortment" ORDER BY "createdAt" DESC`
+        );
         res.json(result.rows);
     } catch (error: any) {
         console.error('getAssortments error:', error);
@@ -58,28 +56,28 @@ export const getAssortmentById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const assortmentResult = await query(
+        const assortment = await query(
             `SELECT * FROM "Assortment" WHERE id = $1`,
             [id]
         );
 
-        if (!assortmentResult.rows.length) {
+        if (!assortment.rows.length) {
             return res.status(404).json({ message: 'Assortment not found' });
         }
 
-        const productsResult = await query(
+        const products = await query(
             `
-      SELECT p.*
-      FROM "AssortmentProduct" ap
-      JOIN "Product" p ON ap."productId" = p.id
-      WHERE ap."assortmentId" = $1
-      `,
+            SELECT p.*
+            FROM "AssortmentProduct" ap
+            JOIN "Product" p ON ap."productId" = p.id
+            WHERE ap."assortmentId" = $1
+            `,
             [id]
         );
 
         res.json({
-            ...assortmentResult.rows[0],
-            products: productsResult.rows,
+            ...assortment.rows[0],
+            products: products.rows,
         });
     } catch (error: any) {
         console.error('getAssortmentById error:', error);
@@ -94,13 +92,13 @@ export const updateAssortment = async (req: Request, res: Response) => {
 
         const result = await query(
             `
-      UPDATE "Assortment"
-      SET name = COALESCE($2, name),
-          description = COALESCE($3, description),
-          "updatedAt" = NOW()
-      WHERE id = $1
-      RETURNING *
-      `,
+            UPDATE "Assortment"
+            SET name = COALESCE($2, name),
+                description = COALESCE($3, description),
+                "updatedAt" = NOW()
+            WHERE id = $1
+            RETURNING *
+            `,
             [id, name, description]
         );
 

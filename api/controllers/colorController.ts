@@ -8,8 +8,8 @@ export const getColors = async (_req: Request, res: Response) => {
         );
         res.json(result.rows);
     } catch (error: any) {
-        console.error('Error fetching colors:', error);
-        res.status(500).json({ error: 'Failed to fetch colors' });
+        console.error('getColors error:', error);
+        res.status(500).json({ message: 'Failed to fetch colors' });
     }
 };
 
@@ -23,21 +23,21 @@ export const createColor = async (req: Request, res: Response) => {
         );
 
         if (existing.rows.length > 0) {
-            return res.status(400).json({ error: 'Color already exists' });
+            return res.status(400).json({ message: 'Color already exists' });
         }
 
         const result = await query(
             `
-      INSERT INTO "Color" (id, name, "hexCode")
-      VALUES (gen_random_uuid(), $1, $2)
-      RETURNING *
-      `,
+            INSERT INTO "Color" (id, name, "hexCode")
+            VALUES (gen_random_uuid(), $1, $2)
+            RETURNING *
+            `,
             [name, hexCode]
         );
 
         res.status(201).json(result.rows[0]);
     } catch (error: any) {
-        console.error('Error creating color:', error);
-        res.status(500).json({ error: 'Failed to create color' });
+        console.error('createColor error:', error);
+        res.status(500).json({ message: 'Failed to create color' });
     }
 };

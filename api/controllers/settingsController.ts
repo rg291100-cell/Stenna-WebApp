@@ -10,10 +10,10 @@ export const getSetting = async (req: Request, res: Response) => {
             [key]
         );
 
-        res.json(result.rows[0] || { key, value: '' });
+        res.json(result.rows[0] ?? { key, value: '' });
     } catch (error: any) {
-        console.error('Error fetching setting:', error);
-        res.status(500).json({ error: 'Failed to fetch setting' });
+        console.error('getSetting error:', error);
+        res.status(500).json({ message: 'Failed to fetch setting' });
     }
 };
 
@@ -24,18 +24,18 @@ export const updateSetting = async (req: Request, res: Response) => {
 
         const result = await query(
             `
-      INSERT INTO "SystemSetting" (key, value)
-      VALUES ($1, $2)
-      ON CONFLICT (key)
-      DO UPDATE SET value = EXCLUDED.value
-      RETURNING *
-      `,
+            INSERT INTO "SystemSetting" (key, value)
+            VALUES ($1, $2)
+            ON CONFLICT (key)
+            DO UPDATE SET value = EXCLUDED.value
+            RETURNING *
+            `,
             [key, value]
         );
 
         res.json(result.rows[0]);
     } catch (error: any) {
-        console.error('Error updating setting:', error);
-        res.status(500).json({ error: 'Failed to update setting' });
+        console.error('updateSetting error:', error);
+        res.status(500).json({ message: 'Failed to update setting' });
     }
 };
