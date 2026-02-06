@@ -6,17 +6,14 @@ export const getSetting = async (req: Request, res: Response) => {
         const { key } = req.params;
 
         const result = await query(
-            'SELECT * FROM "SystemSetting" WHERE key = $1',
+            `SELECT * FROM "SystemSetting" WHERE key = $1`,
             [key]
         );
 
         res.json(result.rows[0] || { key, value: '' });
     } catch (error: any) {
         console.error('Error fetching setting:', error);
-        res.status(500).json({
-            error: 'Failed to fetch setting',
-            details: error.message
-        });
+        res.status(500).json({ error: 'Failed to fetch setting' });
     }
 };
 
@@ -39,9 +36,6 @@ export const updateSetting = async (req: Request, res: Response) => {
         res.json(result.rows[0]);
     } catch (error: any) {
         console.error('Error updating setting:', error);
-        res.status(500).json({
-            error: 'Failed to update setting',
-            details: error.message
-        });
+        res.status(500).json({ error: 'Failed to update setting' });
     }
 };

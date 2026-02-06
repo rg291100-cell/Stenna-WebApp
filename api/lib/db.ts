@@ -1,9 +1,9 @@
-import pkg from 'pg';
-const { Pool } = pkg;
+// api/lib/db.ts
+import { Pool } from 'pg';
 
-let pool: pkg.Pool | null = null;
+let pool: Pool | null = null;
 
-export default function getDb() {
+function getPool(): Pool {
     if (!pool) {
         const url = process.env.DATABASE_URL;
 
@@ -11,21 +11,12 @@ export default function getDb() {
             throw new Error('DATABASE_URL is not defined');
         }
 
-        console.log('[Database] Initializing pool');
-
         pool = new Pool({
             connectionString: url,
-            ssl: {
-                rejectUnauthorized: false,
-            },
+            ssl: { rejectUnauthorized: false },
             max: 1,
             idleTimeoutMillis: 10000,
             connectionTimeoutMillis: 10000,
-        });
-
-        pool.on('error', (err) => {
-            console.error('[Database] Pool error:', err);
-            pool = null;
         });
     }
 
@@ -33,6 +24,5 @@ export default function getDb() {
 }
 
 export async function query(text: string, params?: any[]) {
-    const db = getDb();
-    return db.query(text, params);
+    return getPool().query(text, params);
 }
