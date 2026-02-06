@@ -6,17 +6,17 @@ export const register = async (req, res) => {
     try {
         const { email, password, companyName, role } = req.body;
         const existing = await query(`SELECT id FROM "User" WHERE email = $1`, [email]);
-        if (existing.rows.length) {
+        if (existing.length) {
             return res.status(400).json({ message: 'User already exists' });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await query(`
+        const rows = await query(`
             INSERT INTO "User"
             (id, email, password, "companyName", role, "updatedAt")
             VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
             RETURNING *
             `, [email, hashedPassword, companyName, role ?? 'RETAILER']);
-        const user = result.rows[0];
+        const user = rows[0];
         const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
         res.status(201).json({
             token,
@@ -36,8 +36,8 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const result = await query(`SELECT * FROM "User" WHERE email = $1`, [email]);
-        const user = result.rows[0];
+        const rows = await query(`SELECT * FROM "User" WHERE email = $1`, [email]);
+        const user = rows[0];
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }

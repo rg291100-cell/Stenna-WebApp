@@ -27,7 +27,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
             [userId, type ?? 'SAMPLE']
         );
 
-        const order = orderResult.rows[0];
+        const order = orderResult[0];
 
         for (const item of items) {
             await query(
@@ -54,7 +54,7 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
             return res.status(401).json({ message: 'Unauthorized' });
         }
 
-        const result = await query(
+        const rows = await query(
             `
             SELECT *
             FROM "Order"
@@ -64,7 +64,7 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
             [userId]
         );
 
-        res.json(result.rows);
+        res.json(rows);
     } catch (error: any) {
         console.error('getOrders error:', error);
         res.status(500).json({ message: 'Internal server error' });

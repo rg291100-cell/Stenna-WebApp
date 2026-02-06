@@ -9,7 +9,7 @@ export const createAssortment = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Assortment name is required' });
         }
 
-        const result = await query(
+        const rows = await query(
             `
             INSERT INTO "Assortment" (id, name, description)
             VALUES (gen_random_uuid(), $1, $2)
@@ -18,7 +18,7 @@ export const createAssortment = async (req: Request, res: Response) => {
             [name, description ?? null]
         );
 
-        const assortment = result.rows[0];
+        const assortment = rows[0];
 
         if (Array.isArray(products)) {
             for (const productId of products) {
@@ -42,10 +42,10 @@ export const createAssortment = async (req: Request, res: Response) => {
 
 export const getAssortments = async (_req: Request, res: Response) => {
     try {
-        const result = await query(
+        const rows = await query(
             `SELECT * FROM "Assortment" ORDER BY "createdAt" DESC`
         );
-        res.json(result.rows);
+        res.json(rows);
     } catch (error: any) {
         console.error('getAssortments error:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -61,24 +61,25 @@ export const getAssortmentById = async (req: Request, res: Response) => {
             [id]
         );
 
-        if (!assortment.rows.length) {
+        if (!assortment.length) {
             return res.status(404).json({ message: 'Assortment not found' });
         }
 
         const products = await query(
             `
-            SELECT p.*
-            FROM "AssortmentProduct" ap
-            JOIN "Product" p ON ap."productId" = p.id
-            WHERE ap."assortmentId" = $1
-            `,
+  SELECT p.*
+  FROM "AssortmentProduct" ap
+  JOIN "Product" p ON ap."productId" = p.id
+  WHERE ap."assortmentId" = $1
+  `,
             [id]
         );
 
         res.json({
-            ...assortment.rows[0],
-            products: products.rows,
+            ...assortment[0],
+            products,
         });
+
     } catch (error: any) {
         console.error('getAssortmentById error:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -90,7 +91,7 @@ export const updateAssortment = async (req: Request, res: Response) => {
         const { id } = req.params;
         const { name, description } = req.body;
 
-        const result = await query(
+        const rows = await query(
             `
             UPDATE "Assortment"
             SET name = COALESCE($2, name),
@@ -102,11 +103,11 @@ export const updateAssortment = async (req: Request, res: Response) => {
             [id, name, description]
         );
 
-        if (!result.rows.length) {
+        if (!rows.length) {
             return res.status(404).json({ message: 'Assortment not found' });
         }
 
-        res.json(result.rows[0]);
+        res.json(rows[0]);
     } catch (error: any) {
         console.error('updateAssortment error:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -122,12 +123,12 @@ export const deleteAssortment = async (req: Request, res: Response) => {
             [id]
         );
 
-        const result = await query(
+        const rows = await query(
             `DELETE FROM "Assortment" WHERE id = $1 RETURNING id`,
             [id]
         );
 
-        if (!result.rows.length) {
+        if (!rows.length) {
             return res.status(404).json({ message: 'Assortment not found' });
         }
 

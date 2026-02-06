@@ -1,8 +1,8 @@
 import { query } from '../lib/db.js';
 export const getCollections = async (_req, res) => {
     try {
-        const result = await query(`SELECT * FROM "Collection" ORDER BY title ASC`);
-        res.json(result.rows);
+        const rows = await query(`SELECT * FROM "Collection" ORDER BY title ASC`);
+        res.json(rows);
     }
     catch (error) {
         console.error('getCollections error:', error);
@@ -12,11 +12,11 @@ export const getCollections = async (_req, res) => {
 export const getCollectionById = async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await query(`SELECT * FROM "Collection" WHERE id = $1`, [id]);
-        if (!result.rows.length) {
+        const rows = await query(`SELECT * FROM "Collection" WHERE id = $1`, [id]);
+        if (!rows.length) {
             return res.status(404).json({ message: 'Collection not found' });
         }
-        res.json(result.rows[0]);
+        res.json(rows[0]);
     }
     catch (error) {
         console.error('getCollectionById error:', error);

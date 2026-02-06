@@ -1,19 +1,25 @@
-import pkg from 'pg';
-const { Pool } = pkg;
+import pg from 'pg';
+const { Pool } = pg;
 let pool = null;
-export function getDb() {
+function getPool() {
     if (!pool) {
-        if (!process.env.DATABASE_URL) {
-            throw new Error('DATABASE_URL not set');
-        }
         pool = new Pool({
             connectionString: process.env.DATABASE_URL,
-            ssl: { rejectUnauthorized: false },
-            max: 1
+            ssl: {
+                rejectUnauthorized: false,
+            },
+        });
+        pool.on('connect', () => {
+            console.log('✅ PostgreSQL connected');
+        });
+        pool.on('error', (err) => {
+            console.error('❌ PostgreSQL error', err);
+            pool = null;
         });
     }
     return pool;
 }
 export async function query(text, params) {
-    return getDb().query(text, params);
+    const result = await getPool().query(text, params);
+    return result.rows;
 }

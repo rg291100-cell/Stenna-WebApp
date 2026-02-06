@@ -14,7 +14,7 @@ export const createOrder = async (req, res) => {
             VALUES (gen_random_uuid(), $1, $2, 'PENDING')
             RETURNING *
             `, [userId, type ?? 'SAMPLE']);
-        const order = orderResult.rows[0];
+        const order = orderResult[0];
         for (const item of items) {
             await query(`
                 INSERT INTO "OrderItem"
@@ -35,13 +35,13 @@ export const getOrders = async (req, res) => {
         if (!userId) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
-        const result = await query(`
+        const rows = await query(`
             SELECT *
             FROM "Order"
             WHERE "userId" = $1
             ORDER BY "createdAt" DESC
             `, [userId]);
-        res.json(result.rows);
+        res.json(rows);
     }
     catch (error) {
         console.error('getOrders error:', error);

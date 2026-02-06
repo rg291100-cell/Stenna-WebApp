@@ -14,13 +14,13 @@ export const register: RequestHandler = async (req, res) => {
             [email]
         );
 
-        if (existing.rows.length) {
+        if (existing.length) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const result = await query(
+        const rows = await query(
             `
             INSERT INTO "User"
             (id, email, password, "companyName", role, "updatedAt")
@@ -30,7 +30,7 @@ export const register: RequestHandler = async (req, res) => {
             [email, hashedPassword, companyName, role ?? 'RETAILER']
         );
 
-        const user = result.rows[0];
+        const user = rows[0];
 
         const token = jwt.sign(
             { id: user.id, role: user.role },
@@ -57,12 +57,12 @@ export const login: RequestHandler = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const result = await query(
+        const rows = await query(
             `SELECT * FROM "User" WHERE email = $1`,
             [email]
         );
 
-        const user = result.rows[0];
+        const user = rows[0];
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }

@@ -9,7 +9,7 @@ export const ProductList: React.FC = () => {
     const { data: products, isLoading } = useQuery({
         queryKey: ['admin-products'],
         queryFn: async () => {
-            const response = await api.get('/products');
+            const response = await api.get('/api/products');
             return response.data;
         }
     });

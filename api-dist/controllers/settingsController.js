@@ -2,8 +2,8 @@ import { query } from '../lib/db.js';
 export const getSetting = async (req, res) => {
     try {
         const { key } = req.params;
-        const result = await query(`SELECT * FROM "SystemSetting" WHERE key = $1`, [key]);
-        res.json(result.rows[0] ?? { key, value: '' });
+        const rows = await query(`SELECT * FROM "SystemSetting" WHERE key = $1`, [key]);
+        res.json(rows[0] ?? { key, value: '' });
     }
     catch (error) {
         console.error('getSetting error:', error);
@@ -14,14 +14,14 @@ export const updateSetting = async (req, res) => {
     try {
         const { key } = req.params;
         const { value } = req.body;
-        const result = await query(`
+        const rows = await query(`
             INSERT INTO "SystemSetting" (key, value)
             VALUES ($1, $2)
             ON CONFLICT (key)
             DO UPDATE SET value = EXCLUDED.value
             RETURNING *
             `, [key, value]);
-        res.json(result.rows[0]);
+        res.json(rows[0]);
     }
     catch (error) {
         console.error('updateSetting error:', error);

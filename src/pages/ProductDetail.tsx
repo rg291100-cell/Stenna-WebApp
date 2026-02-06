@@ -54,7 +54,7 @@ export const ProductDetail: React.FC = () => {
   const { data: allProducts } = useQuery({
     queryKey: ['products', 'All'],
     queryFn: async () => {
-      const response = await api.get('/products');
+      const response = await api.get('/api/products');
       return response.data;
     },
     staleTime: 5 * 60 * 1000 // 5 minutes

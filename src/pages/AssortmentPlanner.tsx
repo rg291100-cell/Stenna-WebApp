@@ -81,7 +81,7 @@ export const AssortmentPlanner: React.FC = () => {
     const { data: products } = useQuery({
         queryKey: ['products'],
         queryFn: async () => {
-            const res = await api.get('/products');
+            const res = await api.get('/api/products');
             return res.data;
         }
     });
