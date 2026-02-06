@@ -9,19 +9,22 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  image: string; // Assuming 'images' array in backend, we'll handle it
-  images?: string[];
+  images: string[];   // ✅ backend field
+  category: string;
   collectionId?: string;
   collection?: { title: string };
-  category: string;
 }
+
 
 const ProductCard: React.FC<{ wallpaper: any }> = ({ wallpaper }) => {
   const [isHovered, setIsHovered] = useState(false);
   const displayImage = wallpaper.images && wallpaper.images.length > 0 ? wallpaper.images[0] : wallpaper.image;
 
   // Fallback for demo if no image
-  const finalImage = displayImage || 'https://images.unsplash.com/photo-1615529182904-14819c35db37?q=80&w=2080&auto=format&fit=crop';
+  const finalImage =
+    Array.isArray(wallpaper.images) && wallpaper.images.length > 0
+      ? wallpaper.images[0]
+      : 'https://images.unsplash.com/photo-1615529182904-14819c35db37?q=80&w=2080&auto=format&fit=crop';
 
   return (
     <div
@@ -235,7 +238,7 @@ export const Catalog: React.FC = () => {
 
       {/* Luxury Editorial Grid - 2 columns for ALL categories */}
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-20 gap-y-12 transition-all duration-1000">
-        {Array.isArray(products) && products.map((wp: any) => (
+        {Array.isArray(products) && products.map((wp: Product) => (
           <ProductCard key={wp.id} wallpaper={wp} />
         ))}
       </div>
