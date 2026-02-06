@@ -107,24 +107,51 @@ export const Catalog: React.FC = () => {
   };
 
   // Fetch from API
-  const { data: products, isLoading, error } = useQuery({
-    queryKey: ['products', filter, activeFilters],
+  const { data: products = [], isLoading, error } = useQuery({
+    queryKey: ['products'],
     queryFn: async () => {
-      const params: any = {};
-
-      // Category Filter
-      if (filter !== 'All') params.category = filter.toUpperCase();
-
-      // Attribute Filters
-      if (activeFilters.room.length > 0) params.room = activeFilters.room;
-      if (activeFilters.color.length > 0) params.color = activeFilters.color;
-      if (activeFilters.theme.length > 0) params.theme = activeFilters.theme;
-
-      const response = await api.get('/products', { params });
-      return response.data;
+      const res = await api.get('/api/products');
+      return res.data;
     },
-    retry: 1
+    retry: 1,
   });
+
+  const filteredProducts = React.useMemo(() => {
+    let list = products;
+
+    // Category filter
+    if (filter !== 'All') {
+      list = list.filter(
+        (p: any) => p.category?.toUpperCase() === filter.toUpperCase()
+      );
+    }
+
+    // Room filter
+    if (activeFilters.room.length) {
+      list = list.filter((p: any) =>
+        activeFilters.room.includes(p.room)
+      );
+    }
+
+    // Color filter
+    if (activeFilters.color.length) {
+      list = list.filter((p: any) =>
+        activeFilters.color.includes(p.color)
+      );
+    }
+
+    // Theme filter
+    if (activeFilters.theme.length) {
+      list = list.filter((p: any) =>
+        activeFilters.theme.includes(p.theme)
+      );
+    }
+
+    return list;
+  }, [products, filter, activeFilters]);
+
+
+
 
   if (isLoading) return (
     <div className="min-h-screen pt-32 px-6 flex justify-center">
@@ -238,9 +265,10 @@ export const Catalog: React.FC = () => {
 
       {/* Luxury Editorial Grid - 2 columns for ALL categories */}
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-20 gap-y-12 transition-all duration-1000">
-        {Array.isArray(products) && products.map((wp: Product) => (
+        {filteredProducts.map((wp: any) => (
           <ProductCard key={wp.id} wallpaper={wp} />
         ))}
+
       </div>
 
       {products && products.length === 0 && (
