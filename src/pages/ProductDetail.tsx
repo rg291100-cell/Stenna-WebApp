@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
+import { CircularProgress } from '@mui/material';
 import { generateDesignAdvice } from '../services/geminiService';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
-/* -------------------------------- Accordion -------------------------------- */
+const FALLBACK_IMAGE =
+  'https://images.unsplash.com/photo-1615529182904-14819c35db37?q=80&w=2080&auto=format&fit=crop';
 
 const Accordion: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,215 +16,132 @@ const Accordion: React.FC<{ title: string; children: React.ReactNode }> = ({ tit
     <div className="border-b border-gray-100 py-6">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex justify-between items-center text-xs tracking-widest uppercase text-left"
+        className="w-full flex justify-between items-center text-xs tracking-widest uppercase"
       >
         <span>{title}</span>
-        <span className="text-xl font-light">{isOpen ? '−' : '+'}</span>
+        <span>{isOpen ? '−' : '+'}</span>
       </button>
-      {isOpen && (
-        <div className="mt-6 text-sm text-gray-500 leading-relaxed animate-in slide-in-from-top-2 duration-300">
-          {children}
-        </div>
-      )}
+      {isOpen && <div className="mt-6 text-sm text-gray-500">{children}</div>}
     </div>
   );
 };
-
-/* ------------------------------ Product Detail ------------------------------ */
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-
   const { addItem } = useCart();
   const { isAuthenticated } = useAuth();
 
   const [advice, setAdvice] = useState<string | null>(null);
   const [loadingAdvice, setLoadingAdvice] = useState(false);
 
-  /* ------------------------------- Fetch Product ------------------------------ */
-
+  // --- PRODUCT QUERY ---
   const { data: rawProduct, isLoading, error } = useQuery({
     queryKey: ['product', id],
-    queryFn: async () => {
-      const res = await api.get(`/api/products/${id}`);
-      return res.data;
-    },
+    queryFn: async () => (await api.get(`/api/products/${id}`)).data,
     enabled: !!id
   });
 
-  /* -------------------------- Normalize product ONCE -------------------------- */
-
+  // --- NORMALIZE PRODUCT (CRITICAL) ---
   const product = useMemo(() => {
     if (!rawProduct) return null;
-
     return {
       ...rawProduct,
-      images: Array.isArray(rawProduct.images) && rawProduct.images.length > 0
-        ? rawProduct.images
-        : [
-          'https://images.unsplash.com/photo-1615529182904-14819c35db37?q=80&w=2080&auto=format&fit=crop'
-        ],
-      videos: Array.isArray(rawProduct.videos) ? rawProduct.videos : []
+      images: rawProduct.images?.length ? rawProduct.images : [FALLBACK_IMAGE],
+      videos: rawProduct.videos ?? []
     };
   }, [rawProduct]);
 
-  /* ------------------------------ Fetch All Products ------------------------------ */
-
-  const { data: allProducts } = useQuery({
-    queryKey: ['products'],
-    queryFn: async () => {
-      const res = await api.get('/api/products');
-      return res.data;
-    },
-    staleTime: 5 * 60 * 1000
-  });
-
-  /* ------------------------------ Side Effects ------------------------------ */
-
+  // --- SAFE CLIENT-ONLY EFFECTS ---
   useEffect(() => {
     if (!product) return;
 
-    setLoadingAdvice(true);
-    generateDesignAdvice('minimalist living room', product.name)
-      .then(setAdvice)
-      .finally(() => setLoadingAdvice(false));
-
+    // Scroll (safe)
     window.scrollTo(0, 0);
-  }, [product]);
 
-  /* ------------------------------- Media Builder ------------------------------- */
-
-  const mediaItems = useMemo(() => {
-    if (!product) return [];
-
-    const images = product.images.map((src: string) => ({ type: 'image', src }));
-    const videos = product.videos.map((src: string) => ({ type: 'video', src }));
-
-    const combined = [...images, ...videos];
-    if (combined.length === 0) return [];
-
-    const [first, ...rest] = combined;
-
-    for (let i = rest.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [rest[i], rest[j]] = [rest[j], rest[i]];
+    // sessionStorage (SSR safe)
+    if (typeof window !== 'undefined') {
+      if (!sessionStorage.getItem('stenna_nav_hint')) {
+        sessionStorage.setItem('stenna_nav_hint', 'true');
+      }
     }
 
-    return [
-      first,
-      ...rest.map(item => ({
-        ...item,
-        span: item.type === 'video'
-          ? 'large'
-          : ['small', 'wide', 'tall', 'large'][Math.floor(Math.random() * 4)]
-      }))
-    ];
+    // Gemini AI (guarded)
+    setLoadingAdvice(true);
+    generateDesignAdvice('minimalist living room', product.name)
+      .then(res => setAdvice(res || null))
+      .catch(() => setAdvice(null))
+      .finally(() => setLoadingAdvice(false));
   }, [product]);
 
-  /* ------------------------------- Loading / Error ------------------------------- */
-
+  // --- LOADING ---
   if (isLoading) {
-    return <div className="min-h-screen bg-white animate-pulse" />;
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        <CircularProgress />
+      </div>
+    );
   }
 
   if (error || !product) {
     return <div className="min-h-screen pt-40 text-center">Product not found.</div>;
   }
 
-  /* ------------------------------ Navigation Logic ------------------------------ */
-
-  const categoryProducts =
-    allProducts?.filter((p: any) => p.category === product.category) || [];
-
-  const index = categoryProducts.findIndex((p: any) => p.id === product.id);
-  const nextProduct = categoryProducts[(index + 1) % categoryProducts.length];
-  const prevProduct =
-    categoryProducts[(index - 1 + categoryProducts.length) % categoryProducts.length];
-
-  /* ------------------------------ Smooth Image ------------------------------ */
-
-  const SmoothImage = ({ src, alt, priority = false }: any) => {
-    const [loaded, setLoaded] = useState(false);
-    return (
-      <img
-        src={src}
-        alt={alt}
-        loading={priority ? 'eager' : 'lazy'}
-        onLoad={() => setLoaded(true)}
-        className={`w-full h-full object-cover transition-opacity duration-700 ${loaded ? 'opacity-100' : 'opacity-0'
-          }`}
-      />
-    );
-  };
-
-  /* --------------------------------- Render --------------------------------- */
+  const mainImage = product.images[0];
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="flex flex-col md:flex-row">
+    <div className="min-h-screen bg-white flex flex-col md:flex-row">
 
-        {/* ------------------------------ Gallery ------------------------------ */}
-        <div className="w-full md:w-[65%]">
+      {/* IMAGES */}
+      <div className="w-full md:w-[65%]">
+        <img
+          src={mainImage}
+          alt={product.name}
+          className="w-full h-auto object-cover"
+        />
+      </div>
 
-          {/* Main Media */}
-          {mediaItems[0] && (
-            <div className="mb-1">
-              {mediaItems[0].type === 'video' ? (
-                <video src={mediaItems[0].src} controls className="w-full" />
-              ) : (
-                <SmoothImage
-                  src={mediaItems[0].src}
-                  alt={product.name}
-                  priority
-                />
-              )}
-            </div>
-          )}
+      {/* CONTENT */}
+      <div className="w-full md:w-[35%] px-8 py-12 space-y-8">
+        <span className="text-xs tracking-widest uppercase text-gray-400">
+          {product.collection?.title || 'Stenna Collection'}
+        </span>
 
-          {/* Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-1">
-            {mediaItems.slice(1).map((item: any, i: number) => (
-              <div key={i} className="bg-gray-50 overflow-hidden">
-                {item.type === 'video' ? (
-                  <video src={item.src} muted loop autoPlay className="w-full h-full object-cover" />
-                ) : (
-                  <SmoothImage src={item.src} alt={`${product.name} ${i}`} />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <h1 className="text-4xl font-serif">{product.name}</h1>
 
-        {/* ------------------------------ Content ------------------------------ */}
-        <div className="w-full md:w-[35%] px-6 md:px-12 py-16 md:sticky md:top-0">
-          <span className="text-[10px] tracking-[0.4em] uppercase text-gray-400">
-            {product.collection?.title || 'Stenna Collection'}
-          </span>
+        <p className="text-xl text-gray-600">${product.price} / roll</p>
 
-          <h1 className="text-4xl font-serif mt-4">{product.name}</h1>
-          <p className="text-xl text-gray-600 mt-2">${product.price} / roll</p>
+        <p className="text-sm text-gray-500 italic">
+          {product.description}
+        </p>
 
-          <p className="mt-6 text-sm text-gray-500 italic">
-            {product.description}
-          </p>
+        <Accordion title="Editorial Commentary">
+          {loadingAdvice ? 'Consulting AI Stylist…' : advice || '—'}
+        </Accordion>
 
-          <div className="mt-10">
-            <Accordion title="Editorial Commentary">
-              {loadingAdvice ? 'Consulting stylist…' : advice}
-            </Accordion>
-          </div>
+        <Accordion title="Care & Maintenance">
+          Wipe clean with a damp cloth. Light-fast pigments. Residential safe.
+        </Accordion>
 
-          <div className="mt-10">
-            <Link
-              to={`/visualizer?id=${product.id}`}
-              className="block text-center border border-black py-4 text-xs uppercase tracking-widest hover:bg-black hover:text-white transition"
-            >
-              Virtual Preview
-            </Link>
-          </div>
-        </div>
+        <button
+          onClick={() => {
+            if (!isAuthenticated) {
+              navigate('/login', { state: { from: location } });
+              return;
+            }
+            addItem({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              image: mainImage,
+              quantity: 1
+            });
+          }}
+          className="w-full border border-black py-4 uppercase tracking-widest text-xs hover:bg-black hover:text-white transition"
+        >
+          Add to Cart
+        </button>
       </div>
     </div>
   );
