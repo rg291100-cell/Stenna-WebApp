@@ -87,15 +87,29 @@ export const ProductDetail: React.FC = () => {
   }
 
   /* ---------------------------- Image logic ---------------------------- */
-  const images: string[] =
-    Array.isArray(product.images) && product.images.length > 0
-      ? product.images
-      : [
-        'https://images.unsplash.com/photo-1615529182904-14819c35db37?q=80&w=2000&auto=format&fit=crop',
-      ];
+  /* ---------------- Image logic ---------------- */
+
+  let images: string[] = [];
+
+  try {
+    if (typeof product.images === 'string') {
+      images = JSON.parse(product.images);
+    } else if (Array.isArray(product.images)) {
+      images = product.images;
+    }
+  } catch (err) {
+    console.error('Invalid images JSON:', product.images);
+  }
+
+  if (!images || images.length === 0) {
+    images = [
+      'https://images.unsplash.com/photo-1615529182904-14819c35db37?q=80&w=2000&auto=format&fit=crop'
+    ];
+  }
 
   const mainImage = images[0];
   const galleryImages = images.slice(1);
+
 
   /* ----------------------- Navigation (prev/next) ---------------------- */
   const sameCategory = allProducts.filter(
