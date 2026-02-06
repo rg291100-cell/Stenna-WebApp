@@ -117,7 +117,7 @@ export const Catalog: React.FC = () => {
       if (activeFilters.color.length > 0) params.color = activeFilters.color;
       if (activeFilters.theme.length > 0) params.theme = activeFilters.theme;
 
-      const response = await api.get('/api/products', { params });
+      const response = await api.get('/products', { params });
       return response.data;
     },
     retry: 1
