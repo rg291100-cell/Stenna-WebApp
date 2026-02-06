@@ -59,7 +59,6 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
             SELECT *
             FROM "Order"
             WHERE "userId" = $1
-            ORDER BY "createdAt" DESC
             `,
             [userId]
         );

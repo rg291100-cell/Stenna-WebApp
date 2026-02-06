@@ -43,7 +43,7 @@ export const createAssortment = async (req: Request, res: Response) => {
 export const getAssortments = async (_req: Request, res: Response) => {
     try {
         const rows = await query(
-            `SELECT * FROM "Assortment" ORDER BY "createdAt" DESC`
+            `SELECT * FROM "Assortment"`
         );
         res.json(rows);
     } catch (error: any) {
