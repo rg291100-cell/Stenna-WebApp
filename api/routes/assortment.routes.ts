@@ -5,8 +5,8 @@ import {
     getAssortmentById,
     updateAssortment,
     deleteAssortment
-} from '../controllers/assortmentController.js';
-import { authenticateToken } from '../middleware/auth.js';
+} from '../controllers/assortmentController';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 

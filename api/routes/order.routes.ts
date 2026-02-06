@@ -2,8 +2,8 @@ import { Router } from 'express';
 import {
     createOrder,
     getOrders
-} from '../controllers/orderController.js';
-import { authenticateToken } from '../middleware/auth.js';
+} from '../controllers/orderController';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 

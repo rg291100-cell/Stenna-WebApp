@@ -3,8 +3,9 @@ import {
     getProducts,
     getProductById,
     createProduct
-} from '../controllers/productController.js';
-import { authenticateToken, authorizeRole } from '../middleware/auth.js';
+} from '../controllers/productController';
+
+import { authenticateToken, authorizeRole } from '../middleware/auth';
 
 const router = Router();
 
