@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { getProducts, getProductById, createProduct, } from './controllers/productController.js';
+import { getProducts, getProductById, } from './controllers/productController.js';
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -9,7 +9,6 @@ app.use(express.json());
  */
 app.get('/api/products', getProducts);
 app.get('/api/products/:id', getProductById);
-app.post('/api/products', createProduct);
 /**
  * Health check (important for Vercel sanity)
  */
