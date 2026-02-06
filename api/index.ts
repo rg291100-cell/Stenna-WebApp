@@ -1,19 +1,28 @@
 import express from 'express';
+import cors from 'cors';
 import {
     getProducts,
     getProductById,
     createProduct,
 } from './controllers/productController.js';
 
-const router = express.Router();
+const app = express();
+
+app.use(cors());
+app.use(express.json());
 
 /**
- * ORDER MATTERS
- * Static routes FIRST
- * Dynamic :id route LAST
+ * PRODUCTS ROUTES
  */
-router.get('/', getProducts);
-router.post('/', createProduct);
-router.get('/:id', getProductById);
+app.get('/api/products', getProducts);
+app.get('/api/products/:id', getProductById);
+app.post('/api/products', createProduct);
 
-export default router;
+/**
+ * Health check (important for Vercel sanity)
+ */
+app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok' });
+});
+
+export default app;
