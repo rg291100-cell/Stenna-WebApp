@@ -13,25 +13,26 @@ export const getProducts = async (_req: Request, res: Response) => {
     }
 };
 
-export const getProductById = async (req, res) => {
+export const getProductById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const rows = await query(
-            `SELECT * FROM "Product" WHERE id = $1 LIMIT 1`,
+        const result = await query(
+            `SELECT * FROM "Product" WHERE id = $1`,
             [id]
         );
 
-        if (rows.length === 0) {
+        if (!result || result.length === 0) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        res.json(rows[0]);
+        res.json(result[0]);
     } catch (err) {
-        console.error(err);
+        console.error('getProductById error:', err);
         res.status(500).json({ message: 'Failed to fetch product' });
     }
 };
+
 
 
 export const createProduct = async (req: Request, res: Response) => {

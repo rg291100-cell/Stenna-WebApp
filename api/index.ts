@@ -1,35 +1,19 @@
 import express from 'express';
-import cors from 'cors';
+import {
+    getProducts,
+    getProductById,
+    createProduct,
+} from './controllers/productController.js';
 
-import authRoutes from './routes/auth.routes.js';
-import productRoutes from './routes/product.routes.js';
-import collectionRoutes from './routes/collection.routes.js';
-import assortmentRoutes from './routes/assortment.routes.js';
-import colorRoutes from './routes/color.routes.js';
-import orderRoutes from './routes/order.routes.js';
+const router = express.Router();
 
-import { getSetting, updateSetting } from './controllers/settingsController.js';
-import { checkHealth } from './controllers/healthController.js';
+/**
+ * ORDER MATTERS
+ * Static routes FIRST
+ * Dynamic :id route LAST
+ */
+router.get('/', getProducts);
+router.post('/', createProduct);
+router.get('/:id', getProductById);
 
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-app.get('/api/health', checkHealth);
-
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/collections', collectionRoutes);
-app.use('/api/assortments', assortmentRoutes);
-app.use('/api/colors', colorRoutes);
-app.use('/api/orders', orderRoutes);
-
-app.get('/api/settings/:key', getSetting);
-app.put('/api/settings/:key', updateSetting);
-
-app.get('/api', (_req, res) => {
-    res.json({ message: 'Stenna API running' });
-});
-
-export default app;
+export default router;
