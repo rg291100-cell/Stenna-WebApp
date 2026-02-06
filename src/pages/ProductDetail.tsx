@@ -36,6 +36,10 @@ export const ProductDetail: React.FC = () => {
   const { addItem } = useCart();
   const { isAuthenticated } = useAuth();
 
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
+
   /* --------------------------- Fetch product -------------------------- */
   const {
     data: product,
@@ -126,9 +130,37 @@ export const ProductDetail: React.FC = () => {
     });
   };
 
+  /* ----------------------------- Swipe Handlers --------------------------- */
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchEndX.current = null;
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && nextProduct) {
+      navigate(`/product/${nextProduct.id}`);
+    } else if (isRightSwipe && prevProduct) {
+      navigate(`/product/${prevProduct.id}`);
+    }
+  };
+
   /* ------------------------------- Render ------------------------------ */
   return (
-    <div className="min-h-screen bg-white">
+    <div
+      className="min-h-screen bg-white"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       <div className="flex flex-col md:flex-row">
 
         {/* -------------------------- Images -------------------------- */}
@@ -192,16 +224,11 @@ export const ProductDetail: React.FC = () => {
 
           {/* ---------------------- Actions ---------------------- */}
           <div className="mt-10 space-y-4">
-            <button
-              onClick={handleAddToCart}
-              className="w-full border border-black py-4 text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white transition"
-            >
-              Add to Cart
-            </button>
+            {/* Add to Cart button removed per user request */}
 
             <Link
               to={`/visualizer?id=${product.id}`}
-              className="block w-full text-center border py-4 text-[10px] uppercase tracking-[0.2em]"
+              className="block w-full text-center border py-4 text-[10px] uppercase tracking-[0.2em] bg-black text-white hover:bg-white hover:text-black transition"
             >
               Virtual Preview
             </Link>

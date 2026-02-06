@@ -144,18 +144,27 @@ export const Visualizer: React.FC = () => {
   };
 
   // Swipe support
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
+
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStart.current = e.touches[0].clientX;
+    touchEndX.current = null;
+    touchStart.current = e.targetTouches[0].clientX;
   };
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStart.current !== null) {
-      const touchEnd = e.changedTouches[0].clientX;
-      const diff = touchStart.current - touchEnd;
-      if (Math.abs(diff) > 50) {
-        cycleWallpaper(diff > 0 ? 'next' : 'prev');
-      }
-      touchStart.current = null;
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart.current || !touchEndX.current) return;
+
+    const distance = touchStart.current - touchEndX.current;
+    if (Math.abs(distance) > minSwipeDistance) {
+      cycleWallpaper(distance > 0 ? 'next' : 'prev');
     }
+    touchStart.current = null;
+    touchEndX.current = null;
   };
 
   return (
@@ -164,6 +173,7 @@ export const Visualizer: React.FC = () => {
       <div
         className="w-full md:w-3/4 h-[60vh] md:h-[calc(100vh-6rem)] relative bg-black overflow-hidden flex items-center justify-center p-4 md:p-12"
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         <div className="relative max-w-full max-h-full aspect-video md:aspect-[4/3] w-full shadow-2xl overflow-hidden rounded-sm bg-white group">
