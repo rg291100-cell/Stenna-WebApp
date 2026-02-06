@@ -1,81 +1,70 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { CircularProgress } from '@mui/material';
-import { generateDesignAdvice } from '../services/geminiService';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
-const FALLBACK_IMAGE =
-  'https://images.unsplash.com/photo-1615529182904-14819c35db37?q=80&w=2080&auto=format&fit=crop';
-
+/* ----------------------------- Accordion ----------------------------- */
 const Accordion: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   return (
     <div className="border-b border-gray-100 py-6">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setOpen(!open)}
         className="w-full flex justify-between items-center text-xs tracking-widest uppercase"
       >
         <span>{title}</span>
-        <span>{isOpen ? '−' : '+'}</span>
+        <span className="text-xl font-light">{open ? '−' : '+'}</span>
       </button>
-      {isOpen && <div className="mt-6 text-sm text-gray-500">{children}</div>}
+      {open && (
+        <div className="mt-4 text-sm text-gray-500 leading-relaxed">
+          {children}
+        </div>
+      )}
     </div>
   );
 };
 
+/* --------------------------- Product Detail --------------------------- */
 export const ProductDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+
   const { addItem } = useCart();
   const { isAuthenticated } = useAuth();
 
-  const [advice, setAdvice] = useState<string | null>(null);
-  const [loadingAdvice, setLoadingAdvice] = useState(false);
-
-  // --- PRODUCT QUERY ---
-  const { data: rawProduct, isLoading, error } = useQuery({
+  /* --------------------------- Fetch product -------------------------- */
+  const {
+    data: product,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['product', id],
-    queryFn: async () => (await api.get(`/api/products/${id}`)).data,
-    enabled: !!id
+    enabled: !!id,
+    queryFn: async () => {
+      const res = await api.get(`/api/products/${id}`);
+      return res.data;
+    },
   });
 
-  // --- NORMALIZE PRODUCT (CRITICAL) ---
-  const product = useMemo(() => {
-    if (!rawProduct) return null;
-    return {
-      ...rawProduct,
-      images: rawProduct.images?.length ? rawProduct.images : [FALLBACK_IMAGE],
-      videos: rawProduct.videos ?? []
-    };
-  }, [rawProduct]);
+  /* ------------------------- Fetch all products ------------------------ */
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const res = await api.get('/api/products');
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-  // --- SAFE CLIENT-ONLY EFFECTS ---
   useEffect(() => {
-    if (!product) return;
-
-    // Scroll (safe)
     window.scrollTo(0, 0);
+  }, [id]);
 
-    // sessionStorage (SSR safe)
-    if (typeof window !== 'undefined') {
-      if (!sessionStorage.getItem('stenna_nav_hint')) {
-        sessionStorage.setItem('stenna_nav_hint', 'true');
-      }
-    }
-
-    // Gemini AI (guarded)
-    setLoadingAdvice(true);
-    generateDesignAdvice('minimalist living room', product.name)
-      .then(res => setAdvice(res || null))
-      .catch(() => setAdvice(null))
-      .finally(() => setLoadingAdvice(false));
-  }, [product]);
-
-  // --- LOADING ---
+  /* --------------------------- Loading state --------------------------- */
   if (isLoading) {
     return (
       <div className="min-h-screen flex justify-center items-center">
@@ -84,65 +73,174 @@ export const ProductDetail: React.FC = () => {
     );
   }
 
-  if (error || !product) {
-    return <div className="min-h-screen pt-40 text-center">Product not found.</div>;
+  /* ---------------------------- Error state ---------------------------- */
+  if (isError || !product) {
+    return (
+      <div className="min-h-screen pt-40 text-center text-gray-500">
+        Product not found.
+      </div>
+    );
   }
 
-  const mainImage = product.images[0];
+  /* ---------------------------- Image logic ---------------------------- */
+  const images: string[] =
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : [
+        'https://images.unsplash.com/photo-1615529182904-14819c35db37?q=80&w=2000&auto=format&fit=crop',
+      ];
 
+  const mainImage = images[0];
+  const galleryImages = images.slice(1);
+
+  /* ----------------------- Navigation (prev/next) ---------------------- */
+  const sameCategory = allProducts.filter(
+    (p: any) => p.category === product.category
+  );
+
+  const currentIndex = sameCategory.findIndex((p: any) => p.id === product.id);
+
+  const prevProduct =
+    sameCategory.length > 1
+      ? sameCategory[(currentIndex - 1 + sameCategory.length) % sameCategory.length]
+      : null;
+
+  const nextProduct =
+    sameCategory.length > 1
+      ? sameCategory[(currentIndex + 1) % sameCategory.length]
+      : null;
+
+  /* ----------------------------- Add to cart ---------------------------- */
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: mainImage,
+      quantity: 1,
+    });
+  };
+
+  /* ------------------------------- Render ------------------------------ */
   return (
-    <div className="min-h-screen bg-white flex flex-col md:flex-row">
+    <div className="min-h-screen bg-white">
+      <div className="flex flex-col md:flex-row">
 
-      {/* IMAGES */}
-      <div className="w-full md:w-[65%]">
-        <img
-          src={mainImage}
-          alt={product.name}
-          className="w-full h-auto object-cover"
-        />
-      </div>
+        {/* -------------------------- Images -------------------------- */}
+        <div className="w-full md:w-[65%]">
+          <img
+            src={mainImage}
+            alt={product.name}
+            className="w-full h-auto object-cover"
+          />
 
-      {/* CONTENT */}
-      <div className="w-full md:w-[35%] px-8 py-12 space-y-8">
-        <span className="text-xs tracking-widest uppercase text-gray-400">
-          {product.collection?.title || 'Stenna Collection'}
-        </span>
+          {galleryImages.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-1 mt-1">
+              {galleryImages.map((img, i) => (
+                <img
+                  key={i}
+                  src={img}
+                  alt={`${product.name} ${i + 2}`}
+                  className="w-full h-full object-cover"
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-        <h1 className="text-4xl font-serif">{product.name}</h1>
+        {/* -------------------------- Content -------------------------- */}
+        <div className="w-full md:w-[35%] px-6 md:px-12 py-12 md:sticky md:top-0 h-fit">
 
-        <p className="text-xl text-gray-600">${product.price} / roll</p>
+          <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400">
+            {product.collection?.title || 'Stenna Collection'}
+          </span>
 
-        <p className="text-sm text-gray-500 italic">
-          {product.description}
-        </p>
+          <h1 className="text-4xl md:text-5xl font-serif mt-4">
+            {product.name}
+          </h1>
 
-        <Accordion title="Editorial Commentary">
-          {loadingAdvice ? 'Consulting AI Stylist…' : advice || '—'}
-        </Accordion>
+          <p className="text-xl text-gray-600 mt-2">
+            ${product.price} / roll
+          </p>
 
-        <Accordion title="Care & Maintenance">
-          Wipe clean with a damp cloth. Light-fast pigments. Residential safe.
-        </Accordion>
+          <p className="mt-6 text-sm text-gray-500 italic">
+            {product.description}
+          </p>
 
-        <button
-          onClick={() => {
-            if (!isAuthenticated) {
-              navigate('/login', { state: { from: location } });
-              return;
-            }
-            addItem({
-              id: product.id,
-              name: product.name,
-              price: product.price,
-              image: mainImage,
-              quantity: 1
-            });
-          }}
-          className="w-full border border-black py-4 uppercase tracking-widest text-xs hover:bg-black hover:text-white transition"
-        >
-          Add to Cart
-        </button>
+          {/* ------------------------ Specs ------------------------ */}
+          <div className="mt-8 space-y-3">
+            {product.rollLength && (
+              <Spec label="Length" value={product.rollLength} />
+            )}
+            {product.rollWidth && (
+              <Spec label="Width" value={product.rollWidth} />
+            )}
+            {product.designStyle && (
+              <Spec label="Design Style" value={product.designStyle} />
+            )}
+            {product.color && <Spec label="Color" value={product.color} />}
+            {product.material && (
+              <Spec label="Material" value={product.material} />
+            )}
+            {product.weight && <Spec label="Weight" value={product.weight} />}
+          </div>
+
+          {/* ---------------------- Actions ---------------------- */}
+          <div className="mt-10 space-y-4">
+            <button
+              onClick={handleAddToCart}
+              className="w-full border border-black py-4 text-[10px] uppercase tracking-[0.2em] hover:bg-black hover:text-white transition"
+            >
+              Add to Cart
+            </button>
+
+            <Link
+              to={`/visualizer?id=${product.id}`}
+              className="block w-full text-center border py-4 text-[10px] uppercase tracking-[0.2em]"
+            >
+              Virtual Preview
+            </Link>
+          </div>
+
+          {/* ---------------------- Accordions ---------------------- */}
+          <div className="mt-12">
+            <Accordion title="The Build">
+              Digitally mastered textures on premium non-woven stock. Durable,
+              breathable, and PVC-free.
+            </Accordion>
+            <Accordion title="Care & Maintenance">
+              Wipe clean with a damp cloth. High resistance to fading.
+            </Accordion>
+          </div>
+
+          {/* ------------------ Prev / Next ------------------ */}
+          <div className="mt-12 flex justify-between text-sm">
+            {prevProduct && (
+              <button onClick={() => navigate(`/product/${prevProduct.id}`)}>
+                ← Previous
+              </button>
+            )}
+            {nextProduct && (
+              <button onClick={() => navigate(`/product/${nextProduct.id}`)}>
+                Next →
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 };
+
+/* ------------------------------ Helpers ------------------------------ */
+const Spec = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex justify-between text-[10px] uppercase tracking-widest border-b pb-2">
+    <span className="text-gray-400">{label}</span>
+    <span>{value}</span>
+  </div>
+);
