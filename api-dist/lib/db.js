@@ -1,6 +1,7 @@
 import pg from 'pg';
 const { Pool } = pg;
 let pool = null;
+console.log('DATABASE_URL =', process.env.DATABASE_URL);
 function getPool() {
     if (!pool) {
         pool = new Pool({

@@ -39,7 +39,6 @@ export const getOrders = async (req, res) => {
             SELECT *
             FROM "Order"
             WHERE "userId" = $1
-            ORDER BY "createdAt" DESC
             `, [userId]);
         res.json(rows);
     }

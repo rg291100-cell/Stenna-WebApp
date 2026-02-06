@@ -1,7 +1,7 @@
 import { query } from '../lib/db.js';
 export const getProducts = async (_req, res) => {
     try {
-        const rows = await query(`SELECT * FROM "Product" ORDER BY "createdAt" DESC`);
+        const rows = await query(`SELECT * FROM "Product"`);
         res.json(rows);
     }
     catch (err) {
