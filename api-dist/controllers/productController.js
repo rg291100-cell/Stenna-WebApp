@@ -37,44 +37,47 @@ export const getProductById = async (req, res) => {
 export const createProduct = async (req, res) => {
     try {
         const { name, sku, price, description, quantity, weight, material, rollLength, rollWidth, designStyle, category, room, color, theme, images, videos, collectionId } = req.body;
+        console.log('Creating product with SKU:', sku);
         const rows = await query(`
             INSERT INTO "Product" (
-                id, name, sku, price, description, quantity, weight, material,
-                "rollLength", "rollWidth", "designStyle", category, room, color,
-                theme, images, videos, "collectionId"
+                "id", "name", "sku", "price", "description", "quantity", "weight", "material",
+                "rollLength", "rollWidth", "designStyle", "category", "room", "color",
+                "theme", "images", "videos", "collectionId"
             ) VALUES (
                 gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
             ) RETURNING *
             `, [
             name, sku, price, description, quantity || 0, weight, material,
             rollLength, rollWidth, designStyle, category, room, color,
-            theme, JSON.stringify(images || []), JSON.stringify(videos || []), collectionId
+            theme, JSON.stringify(images || []), JSON.stringify(videos || []), collectionId || null
         ]);
         res.status(201).json(rows[0]);
     }
     catch (err) {
         console.error('createProduct error:', err);
-        res.status(500).json({ message: 'Failed to create product' });
+        res.status(500).json({ message: 'Failed to create product', details: err instanceof Error ? err.message : String(err) });
     }
 };
 export const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, sku, price, description, quantity, weight, material, rollLength, rollWidth, designStyle, category, room, color, theme, images, videos, collectionId } = req.body;
+        console.log(`Updating product ${id}:`, { name, sku, price });
         const rows = await query(`
             UPDATE "Product" SET
-                name = $1, sku = $2, price = $3, description = $4, quantity = $5,
-                weight = $6, material = $7, "rollLength" = $8, "rollWidth" = $9,
-                "designStyle" = $10, category = $11, room = $12, color = $13,
-                theme = $14, images = $15, videos = $16, "collectionId" = $17
-            WHERE id = $18
+                "name" = $1, "sku" = $2, "price" = $3, "description" = $4, "quantity" = $5,
+                "weight" = $6, "material" = $7, "rollLength" = $8, "rollWidth" = $9,
+                "designStyle" = $10, "category" = $11, "room" = $12, "color" = $13,
+                "theme" = $14, "images" = $15, "videos" = $16, "collectionId" = $17
+            WHERE "id" = $18
             RETURNING *
             `, [
             name, sku, price, description, quantity || 0, weight, material,
             rollLength, rollWidth, designStyle, category, room, color,
-            theme, JSON.stringify(images || []), JSON.stringify(videos || []), collectionId,
+            theme, JSON.stringify(images || []), JSON.stringify(videos || []), collectionId || null,
             id
         ]);
+        console.log(`Update result for ${id}:`, rows.length > 0 ? 'Success' : 'Not Found');
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Product not found' });
         }
@@ -82,7 +85,7 @@ export const updateProduct = async (req, res) => {
     }
     catch (err) {
         console.error('updateProduct error:', err);
-        res.status(500).json({ message: 'Failed to update product' });
+        res.status(500).json({ message: 'Failed to update product', details: err instanceof Error ? err.message : String(err) });
     }
 };
 export const deleteProduct = async (req, res) => {

@@ -21,6 +21,6 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/assortments', assortmentRoutes);
 app.use('/api/colors', colorRoutes);
 app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', version: '2.0.1', timestamp: new Date().toISOString() });
 });
 export default app;
