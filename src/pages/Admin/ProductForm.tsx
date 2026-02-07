@@ -69,6 +69,22 @@ export const ProductForm: React.FC = () => {
 
     useEffect(() => {
         if (product) {
+            const parseArray = (val: any) => {
+                if (Array.isArray(val)) return val;
+                if (typeof val === 'string' && val.trim() !== '') {
+                    try {
+                        const parsed = JSON.parse(val);
+                        return Array.isArray(parsed) ? parsed : [val];
+                    } catch {
+                        return [val];
+                    }
+                }
+                return [];
+            };
+
+            const images = parseArray(product.images);
+            const videos = parseArray(product.videos);
+
             setFormData({
                 name: product.name,
                 sku: product.sku,
@@ -84,8 +100,8 @@ export const ProductForm: React.FC = () => {
                 rollWidth: product.rollWidth || '',
                 designStyle: product.designStyle || '',
                 material: product.material || '',
-                images: product.images && product.images.length > 0 ? product.images : [product.image || ''],
-                videos: product.videos && product.videos.length > 0 ? product.videos : ['']
+                images: images.length > 0 ? images : [product.image || ''],
+                videos: videos.length > 0 ? videos : ['']
             });
         }
     }, [product]);
@@ -324,7 +340,7 @@ export const ProductForm: React.FC = () => {
                 <div>
                     <label className="block text-[10px] uppercase tracking-widest text-gray-400 mb-4">Product Images (Max 8)</label>
                     <div className="space-y-4">
-                        {formData.images.map((img, index) => (
+                        {Array.isArray(formData.images) && formData.images.map((img, index) => (
                             <div key={index} className="flex gap-4 items-start">
                                 <span className="text-xs text-gray-400 pt-3">{index + 1}.</span>
                                 <input
@@ -369,7 +385,7 @@ export const ProductForm: React.FC = () => {
                 <div>
                     <label className="block text-[10px] uppercase tracking-widest text-gray-400 mb-4">Product Videos (Max 2)</label>
                     <div className="space-y-4">
-                        {formData.videos.map((vid, index) => (
+                        {Array.isArray(formData.videos) && formData.videos.map((vid, index) => (
                             <div key={index} className="flex gap-4 items-start">
                                 <span className="text-xs text-gray-400 pt-3">{index + 1}.</span>
                                 <input

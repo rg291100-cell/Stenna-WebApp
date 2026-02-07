@@ -145,7 +145,7 @@ INSERT INTO "User" (id, email, password, role, "companyName", "createdAt", "upda
 VALUES (
     gen_random_uuid(), 
     'admin@stenna.com', 
-    '$2a$10$EpRnTzVlqHNP0.fUbXUwSOyuixe/P1x10tTE5gRLMkjqqZ1JAPZQq', 
+    '$2b$10$mpEETBMKoFucI4lh522.6OXqIU17ieGBKJJdekn/Hijef2ej/.jui', 
     'ADMIN', 
     'Stenna HQ', 
     NOW(), 
