@@ -89,7 +89,7 @@ export const ProductForm: React.FC = () => {
             setFormData({
                 name: product.name,
                 sku: product.sku,
-                price: product.price.toString(),
+                price: Number(product.price).toString(),
                 description: product.description,
                 category: product.category,
                 room: product.room || 'Living',

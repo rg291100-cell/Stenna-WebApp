@@ -62,7 +62,7 @@ const ProductCard: React.FC<{ wallpaper: any }> = ({ wallpaper }) => {
           <Link to={`/product/${wallpaper.id}`}>
             <h3 className="text-sm uppercase tracking-[0.2em] font-light hover:italic transition-all duration-300">{wallpaper.name}</h3>
           </Link>
-          <span className="text-[10px] text-gray-400 tracking-widest">${wallpaper.price}/roll</span>
+          <span className="text-[10px] text-gray-400 tracking-widest">${Number(wallpaper.price)}/roll</span>
         </div>
       </div>
     </div>

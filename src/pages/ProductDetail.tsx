@@ -170,7 +170,7 @@ export const ProductDetail: React.FC = () => {
   /* ------------------------------- Render ------------------------------ */
   return (
     <div
-      className="min-h-screen bg-white"
+      className="min-h-screen bg-white pt-24 md:pt-32"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -211,7 +211,7 @@ export const ProductDetail: React.FC = () => {
           </h1>
 
           <p className="text-xl text-gray-600 mt-2">
-            ${product.price} / roll
+            ${Number(product.price)} / roll
           </p>
 
           <p className="mt-6 text-sm text-gray-500 italic">
