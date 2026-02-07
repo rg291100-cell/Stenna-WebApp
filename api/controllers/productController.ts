@@ -84,6 +84,8 @@ export const updateProduct = async (req: Request, res: Response) => {
             theme, images, videos, collectionId
         } = req.body;
 
+        console.log(`Updating product ${id}:`, { name, sku, price });
+
         const rows = await query(
             `
             UPDATE "Product" SET
@@ -101,6 +103,8 @@ export const updateProduct = async (req: Request, res: Response) => {
                 id
             ]
         );
+
+        console.log(`Update result for ${id}:`, rows.length > 0 ? 'Success' : 'Not Found');
 
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Product not found' });

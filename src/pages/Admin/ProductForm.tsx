@@ -27,6 +27,7 @@ export const ProductForm: React.FC = () => {
         rollWidth: '',
         designStyle: '',
         material: '',
+        collectionId: '',
         images: [''], // Array of image URLs
         videos: ['']  // Array of video URLs
     });
@@ -100,6 +101,7 @@ export const ProductForm: React.FC = () => {
                 rollWidth: product.rollWidth || '',
                 designStyle: product.designStyle || '',
                 material: product.material || '',
+                collectionId: product.collectionId || '',
                 images: images.length > 0 ? images : [product.image || ''],
                 videos: videos.length > 0 ? videos : ['']
             });
@@ -107,7 +109,7 @@ export const ProductForm: React.FC = () => {
     }, [product]);
 
     const mutation = useMutation({
-        mutationFn: async (data: any) => {
+        mutationFn: (data: any) => {
             const payload = {
                 ...data,
                 price: parseFloat(data.price),
@@ -117,14 +119,21 @@ export const ProductForm: React.FC = () => {
             };
 
             if (isEdit) {
-                await api.put(`/api/products/${id}`, payload); // Assuming PUT route exists, or we need to add it
+                return api.put(`/api/products/${id}`, payload);
             } else {
-                await api.post('/api/products', payload);
+                return api.post('/api/products', payload);
             }
         },
         onSuccess: () => {
+            // Invalidate all product related queries
             queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            queryClient.invalidateQueries({ queryKey: ['product', id] });
             navigate('/admin/products');
+        },
+        onError: (error: any) => {
+            console.error('Save failed:', error);
+            alert('Failed to save product. Please check console for details.');
         }
     });
 
