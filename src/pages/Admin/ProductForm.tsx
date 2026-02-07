@@ -133,7 +133,8 @@ export const ProductForm: React.FC = () => {
         },
         onError: (error: any) => {
             console.error('Save failed:', error);
-            alert('Failed to save product. Please check console for details.');
+            const message = error.response?.data?.details || error.response?.data?.message || error.message;
+            alert(`Failed to save product: ${message}`);
         }
     });
 
