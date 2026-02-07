@@ -24,21 +24,13 @@ export const Visualizer: React.FC = () => {
         id: p.id,
         name: p.name,
         category: p.category,
-        image: p.images?.[0] || p.image, // Use first image as thumbnail
-        texture: p.images?.[0] || p.image // Use first image as texture for now
+        image: p.images?.[0] || p.image,
+        texture: p.images?.[0] || p.image
       }));
     }
   });
 
   const [selectedWallpaper, setSelectedWallpaper] = useState<any>(null);
-
-  useEffect(() => {
-    if (products.length > 0) {
-      const found = products.find((w: any) => w.id === initialId);
-      setSelectedWallpaper(found || products[0]);
-    }
-  }, [products, initialId]);
-
   const [selectedRoom, setSelectedRoom] = useState(ROOM_TEMPLATES[0].url);
   const [customImage, setCustomImage] = useState<string | null>(null);
   const [intensity, setIntensity] = useState(0.85);
@@ -49,13 +41,62 @@ export const Visualizer: React.FC = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 24;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchStart = useRef<number | null>(null);
 
+  useEffect(() => {
+    if (products.length > 0) {
+      const found = products.find((w: any) => w.id === initialId);
+      setSelectedWallpaper(found || products[0]);
+    }
+  }, [products, initialId]);
+
+  // Trigger analysis for templates if not done
+  useEffect(() => {
+    if (!analysis && selectedRoom) {
+      const analyzeTemplate = async () => {
+        setIsAnalyzing(true);
+        try {
+          // Note: analyzeRoomPhoto might need the image to be converted to base64 if it's a URL
+          // For simplicity in this demo, we'll assume the service can handle it or just provide 
+          // a fallback poly for templates.
+          const result = await analyzeRoomPhoto(selectedRoom);
+          if (result && result.wallPolygon) {
+            setAnalysis(result);
+          }
+        } catch (e) {
+          console.error("Template analysis failed", e);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+
+      // We only analyze if it's one of the templates to save calls, 
+      // or we can use pre-set polygons for templates.
+      const isTemplate = ROOM_TEMPLATES.some(t => t.url === selectedRoom);
+      if (isTemplate) {
+        // Fallback polygons for templates if analysis fails or for speed
+        const templatePolys: Record<string, any> = {
+          [ROOM_TEMPLATES[0].url]: { wallPolygon: [[0, 0], [100, 0], [100, 75], [0, 75]], style: 'Modern Living', recommendation: 'Textured' },
+          [ROOM_TEMPLATES[1].url]: { wallPolygon: [[10, 0], [90, 0], [90, 80], [10, 80]], style: 'Master Suite', recommendation: 'Nature' },
+          [ROOM_TEMPLATES[2].url]: { wallPolygon: [[0, 0], [100, 0], [100, 65], [0, 65]], style: 'Executive Office', recommendation: 'Modern' }
+        };
+        setAnalysis(templatePolys[selectedRoom] || null);
+      }
+    }
+  }, [selectedRoom]);
+
   const categoryWallpapers = selectedWallpaper ? products.filter((w: any) => w.category === selectedWallpaper.category) : [];
+
+  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  const paginatedProducts = products.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const cycleWallpaper = (direction: 'next' | 'prev') => {
     if (!selectedWallpaper || categoryWallpapers.length === 0) return;
@@ -79,8 +120,8 @@ export const Visualizer: React.FC = () => {
         const base64 = event.target?.result as string;
         setCustomImage(base64);
         setSelectedRoom(base64);
+        setAnalysis(null); // Clear old analysis
 
-        // AI Analysis
         setIsAnalyzing(true);
         const result = await analyzeRoomPhoto(base64.split(',')[1]);
         setAnalysis(result);
@@ -93,17 +134,11 @@ export const Visualizer: React.FC = () => {
   const startCamera = async () => {
     try {
       setShowCamera(true);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       setCameraStream(stream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
-      console.error("Error accessing camera:", err);
-      // Fallback or alert
-      alert("Could not access camera. Please allow camera permissions.");
+      alert("Could not access camera.");
       setShowCamera(false);
     }
   };
@@ -120,20 +155,16 @@ export const Visualizer: React.FC = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-
       const context = canvas.getContext('2d');
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const base64 = canvas.toDataURL('image/jpeg');
-
         setCustomImage(base64);
         setSelectedRoom(base64);
+        setAnalysis(null);
         stopCamera();
-
-        // AI Analysis
         setIsAnalyzing(true);
         analyzeRoomPhoto(base64.split(',')[1]).then(result => {
           setAnalysis(result);
@@ -143,221 +174,143 @@ export const Visualizer: React.FC = () => {
     }
   };
 
-  // Swipe support
-  const touchEndX = useRef<number | null>(null);
-  const minSwipeDistance = 50;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchEndX.current = null;
-    touchStart.current = e.targetTouches[0].clientX;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    touchEndX.current = e.targetTouches[0].clientX;
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart.current || !touchEndX.current) return;
-
-    const distance = touchStart.current - touchEndX.current;
-    if (Math.abs(distance) > minSwipeDistance) {
-      cycleWallpaper(distance > 0 ? 'next' : 'prev');
-    }
-    touchStart.current = null;
-    touchEndX.current = null;
+  // Create clip-path from wallPolygon
+  const getClipPath = () => {
+    if (!analysis || !analysis.wallPolygon || analysis.wallPolygon.length === 0) return 'none';
+    const points = analysis.wallPolygon.map((p: number[]) => `${p[0]}% ${p[1]}%`).join(', ');
+    return `polygon(${points})`;
   };
 
   return (
     <div className="pt-24 min-h-screen bg-[#F5F5F5] flex flex-col md:flex-row">
       {/* Viewport */}
-      <div
-        className="w-full md:w-3/4 h-[60vh] md:h-[calc(100vh-6rem)] relative bg-black overflow-hidden flex items-center justify-center p-4 md:p-12"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div className="relative max-w-full max-h-full aspect-video md:aspect-[4/3] w-full shadow-2xl overflow-hidden rounded-sm bg-white group">
-          {/* Base Room Image */}
-          <img
-            src={selectedRoom}
-            alt="Room"
-            className="w-full h-full object-cover"
-          />
+      <div className="w-full md:w-3/4 h-[60vh] md:h-[calc(100vh-6rem)] relative bg-black overflow-hidden flex items-center justify-center p-4 md:p-12">
+        <div className="relative max-w-full max-h-full aspect-[4/3] w-full shadow-2xl overflow-hidden rounded-sm bg-white group">
+          <img src={selectedRoom} alt="Room" className="w-full h-full object-cover" />
 
-          {/* Wallpaper Overlay */}
           {selectedWallpaper && (
             <div
-              className={`absolute inset-0 mask-room pointer-events-none transition-all duration-300 ease-in-out ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
-                }`}
+              className={`absolute inset-0 transition-all duration-500 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
               style={{
                 backgroundImage: `url(${selectedWallpaper.texture})`,
-                backgroundSize: `${200 / scale}px`,
+                backgroundSize: `${400 / scale}px`,
                 opacity: intensity,
-                mixBlendMode: 'multiply'
+                mixBlendMode: 'multiply',
+                clipPath: getClipPath(),
+                WebkitClipPath: getClipPath()
               }}
             />
           )}
 
-          {/* Navigation Arrows - Extremely Minimal */}
-          <button
-            onClick={() => cycleWallpaper('prev')}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2 text-white/40 hover:text-white transition-colors opacity-0 group-hover:opacity-100 hidden md:block"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-
-          <button
-            onClick={() => cycleWallpaper('next')}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2 text-white/40 hover:text-white transition-colors opacity-0 group-hover:opacity-100 hidden md:block"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
-
-          {/* AI Analysis Overlay */}
           {isAnalyzing && (
-            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in">
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center">
               <div className="w-12 h-12 border-2 border-black border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-[10px] tracking-widest uppercase font-bold">Analyzing space aesthetics...</p>
-            </div>
-          )}
-
-          {analysis && (
-            <div className="absolute top-6 right-6 p-4 bg-white/90 backdrop-blur-md text-[10px] tracking-widest uppercase max-w-[200px] border border-black/10 animate-in slide-in-from-right-4">
-              <p className="font-bold mb-2">Room Profile</p>
-              <p className="mb-1 text-gray-500">Style: {analysis.style}</p>
-              <p className="mb-3 text-gray-500">Rec: {analysis.recommendation}</p>
-              <button
-                onClick={() => setAnalysis(null)}
-                className="text-black border-b border-black font-bold"
-              >
-                Dismiss
-              </button>
+              <p className="text-[10px] tracking-widest uppercase font-bold">Mapping your walls...</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Controls */}
-      <div className="w-full md:w-1/4 h-full bg-white p-6 md:p-10 flex flex-col gap-10 overflow-y-auto">
-        <div>
-          <h2 className="text-2xl font-serif mb-2">Visualizer</h2>
-          <p className="text-[10px] tracking-widest uppercase text-gray-400">Atmosphere Preview</p>
+      <div className="w-full md:w-1/4 bg-white p-6 h-screen overflow-y-auto border-l border-gray-100">
+        <div className="mb-8">
+          <h2 className="text-2xl font-serif mb-1">Visualizer</h2>
+          <p className="text-[9px] tracking-[0.3em] uppercase text-gray-400">Precision Atmosphere Preview</p>
         </div>
 
-
-
-        <div>
-          <div className="flex gap-2 mb-8">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-1 py-4 border border-dashed border-gray-300 text-[10px] tracking-widest uppercase hover:border-black transition-colors"
-            >
-              {customImage ? 'Change Photo' : 'Upload Photo'}
-            </button>
-            <button
-              onClick={startCamera}
-              className="flex-1 py-4 bg-black text-white text-[10px] tracking-widest uppercase hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
-              </svg>
-              Camera
-            </button>
-          </div>
-          <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
-          <input type="file" ref={cameraInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" capture="environment" />
-        </div>
-
-        <div>
-          <span className="text-[10px] tracking-widest uppercase block mb-4 font-bold">1. Choose Wallpaper</span>
-          <div className="grid grid-cols-3 gap-2">
-            {products.map((wp: any) => (
+        {/* Room Templates */}
+        <div className="mb-8">
+          <span className="text-[10px] tracking-widest uppercase block mb-3 font-bold">Try our spaces</span>
+          <div className="flex gap-2 h-16">
+            {ROOM_TEMPLATES.map(t => (
               <button
-                key={wp.id}
-                onClick={() => setSelectedWallpaper(wp)}
-                className={`aspect-square overflow-hidden border-2 transition-all ${selectedWallpaper?.id === wp.id ? 'border-black' : 'border-transparent'}`}
+                key={t.id}
+                onClick={() => { setSelectedRoom(t.url); setCustomImage(null); setAnalysis(null); }}
+                className={`flex-1 overflow-hidden border-2 transition-all ${selectedRoom === t.url ? 'border-black' : 'border-transparent'}`}
               >
-                <img src={wp.texture} className="w-full h-full object-cover" alt={wp.name} />
+                <img src={t.url} className="w-full h-full object-cover" alt={t.name} title={t.name} />
               </button>
             ))}
           </div>
-          <p className="mt-3 text-xs uppercase tracking-wider font-light text-center">{selectedWallpaper?.name}</p>
         </div>
 
-        <div className="flex flex-col gap-6">
-          <span className="text-[10px] tracking-widest uppercase block font-bold">2. Adjust Finish</span>
+        {/* Upload */}
+        <div className="flex gap-2 mb-8">
+          <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 border border-gray-200 text-[9px] tracking-widest uppercase hover:border-black transition-colors">
+            {customImage ? 'New Photo' : 'Upload'}
+          </button>
+          <button onClick={startCamera} className="flex-1 py-3 bg-black text-white text-[9px] tracking-widest uppercase flex items-center justify-center gap-2">
+            Camera
+          </button>
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
+        </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-[10px] tracking-widest uppercase">
-              <span>Intensity</span>
-              <span>{Math.round(intensity * 100)}%</span>
-            </div>
-            <input
-              type="range"
-              min="0.1"
-              max="1"
-              step="0.01"
-              value={intensity}
-              onChange={(e) => setIntensity(parseFloat(e.target.value))}
-              className="w-full h-px bg-gray-200 appearance-none cursor-pointer accent-black"
-            />
+        {/* Wallpapers with Pagination */}
+        <div className="mb-8">
+          <div className="flex justify-between items-baseline mb-4">
+            <span className="text-[10px] tracking-widest uppercase font-bold">1. Select Texture</span>
+            <span className="text-[9px] text-gray-400">Page {currentPage} of {totalPages}</span>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-[10px] tracking-widest uppercase">
-              <span>Texture Scale</span>
-              <span>{scale}x</span>
-            </div>
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.1"
-              value={scale}
-              onChange={(e) => setScale(parseFloat(e.target.value))}
-              className="w-full h-px bg-gray-200 appearance-none cursor-pointer accent-black"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            {paginatedProducts.map((wp: any) => (
+              <div key={wp.id} className="flex flex-col gap-2">
+                <button
+                  onClick={() => setSelectedWallpaper(wp)}
+                  className={`aspect-[3/4] overflow-hidden border transition-all ${selectedWallpaper?.id === wp.id ? 'border-black border-2' : 'border-gray-100'}`}
+                >
+                  <img src={wp.texture} className="w-full h-full object-cover" alt={wp.name} />
+                </button>
+                <Link to={`/product/${wp.id}`} className="text-[8px] tracking-widest uppercase text-center border-b border-gray-100 pb-1 hover:border-black transition-colors">
+                  View {wp.name.split(' ')[0]}
+                </Link>
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex justify-between mt-6 pt-4 border-t border-gray-50">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="text-[9px] uppercase tracking-widest disabled:opacity-30"
+            >
+              Previous
+            </button>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="text-[9px] uppercase tracking-widest disabled:opacity-30"
+            >
+              Next
+            </button>
           </div>
         </div>
 
-        <div className="pt-6 border-t border-gray-100 mt-auto">
-          {selectedWallpaper && (
-            <Link to={`/product/${selectedWallpaper.id}`} className="block w-full text-center bg-black text-white text-xs uppercase tracking-widest py-5 hover:bg-gray-800 transition-colors">
-              View Product
-            </Link>
-          )}
+        {/* Finish Controls */}
+        <div className="flex flex-col gap-6 pt-6 border-t border-gray-50">
+          <div className="flex justify-between text-[9px] tracking-widest uppercase font-bold">
+            <span>Blend Intensity</span>
+            <span>{Math.round(intensity * 100)}%</span>
+          </div>
+          <input type="range" min="0.1" max="1" step="0.01" value={intensity} onChange={(e) => setIntensity(parseFloat(e.target.value))} className="w-full h-px bg-gray-200 appearance-none cursor-pointer accent-black" />
+
+          <div className="flex justify-between text-[9px] tracking-widest uppercase font-bold">
+            <span>Texture Scale</span>
+            <span>{scale}x</span>
+          </div>
+          <input type="range" min="0.4" max="2.5" step="0.1" value={scale} onChange={(e) => setScale(parseFloat(e.target.value))} className="w-full h-px bg-gray-200 appearance-none cursor-pointer accent-black" />
         </div>
       </div>
-      {/* Live Camera Modal */}
-      {showCamera && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
-          <div className="relative w-full max-w-lg aspect-[3/4] bg-black">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
-            <canvas ref={canvasRef} className="hidden" />
 
+      {showCamera && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
+          <div className="relative w-full max-w-lg aspect-[3/4] bg-black rounded-lg overflow-hidden">
+            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            <canvas ref={canvasRef} className="hidden" />
             <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-8 items-center">
-              <button
-                onClick={stopCamera}
-                className="text-white text-xs uppercase tracking-widest border border-white/50 px-6 py-3 rounded-full backdrop-blur-md"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={captureImage}
-                className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center bg-white/20 backdrop-blur-sm hover:scale-105 transition-transform"
-              >
-                <div className="w-12 h-12 bg-white rounded-full" />
-              </button>
+              <button onClick={stopCamera} className="text-white text-[10px] uppercase tracking-widest border border-white/50 px-6 py-3 rounded-full">Cancel</button>
+              <button onClick={captureImage} className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center bg-white/20"><div className="w-12 h-12 bg-white rounded-full" /></button>
             </div>
           </div>
         </div>

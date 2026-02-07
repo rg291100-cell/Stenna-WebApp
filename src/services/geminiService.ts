@@ -43,13 +43,26 @@ export const analyzeRoomPhoto = async (base64Image: string) => {
             style: { type: Type.STRING },
             palette: { type: Type.ARRAY, items: { type: Type.STRING } },
             recommendation: { type: Type.STRING, enum: ['Modern', 'Classic', 'Textured', 'Nature'] },
-            rationale: { type: Type.STRING }
+            rationale: { type: Type.STRING },
+            wallPolygon: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.ARRAY,
+                items: { type: Type.NUMBER }
+              },
+              description: "A list of normalized [x, y] coordinates (0-100) forming a polygon that defines the main wall area. This will be used for a CSS clip-path."
+            }
           },
-          required: ['style', 'palette', 'recommendation', 'rationale']
+          required: ['style', 'palette', 'recommendation', 'rationale', 'wallPolygon']
         }
       }
     });
-    return JSON.parse(response.text || '{}');
+
+    const text = response.text || '{}';
+    // Handle potential markdown code blocks in Gemini response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(text);
+    return result;
   } catch (error) {
     console.error("AI Analysis Error:", error);
     return null;
@@ -58,7 +71,7 @@ export const analyzeRoomPhoto = async (base64Image: string) => {
 
 export const generateCustomWallpaper = async (prompt: string, category: string = 'Modern') => {
   const ai = getAI();
-  
+
   const categoryInstructions: Record<string, string> = {
     'Modern': `Architectural & Contemporary. Visual direction: Inspired by modern architecture and interior minimalism. Abstract or geometric compositions. Soft linear forms, blocks, or gradients. Controlled negative space. Palette: warm grey, sand, taupe, off-white, charcoal. Finish: Matte, refined surface.`,
     'Classic': `Timeless & Editorial. Visual direction: Inspired by European heritage interiors. Soft symmetrical patterns or delicate ornamental rhythms. Traditional influences reinterpreted in a modern, restrained way. No heavy ornamentation. Palette: Cream, ivory, warm beige, muted gold, stone. Finish: Soft satin or subtle sheen.`,
