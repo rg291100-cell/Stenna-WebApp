@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { query } from '../lib/db.js';
+import { query } from '../_lib/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 

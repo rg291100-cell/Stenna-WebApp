@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { query } from '../lib/db.js';
+import { query } from '../_lib/db.js';
 
 export const createAssortment = async (req: Request, res: Response) => {
     try {

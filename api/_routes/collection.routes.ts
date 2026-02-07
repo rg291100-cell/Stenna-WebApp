@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
     getCollections,
     getCollectionById
-} from '../controllers/collectionController.js';
+} from '../_controllers/collectionController.js';
 
 const router = Router();
 

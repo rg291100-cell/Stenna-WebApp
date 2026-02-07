@@ -2,11 +2,11 @@ import { Router } from 'express';
 import {
     getColors,
     createColor
-} from '../controllers/colorController.js';
+} from '../_controllers/colorController.js';
 import {
     authenticateToken,
     authorizeRole
-} from '../middleware/auth.js';
+} from '../_middleware/auth.js';
 
 const router = Router();
 

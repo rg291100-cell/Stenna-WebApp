@@ -6,12 +6,13 @@ import {
     createProduct,
     updateProduct,
     deleteProduct
-} from './controllers/productController.js';
-import authRoutes from './routes/auth.routes.js';
-import collectionRoutes from './routes/collection.routes.js';
-import orderRoutes from './routes/order.routes.js';
-import assortmentRoutes from './routes/assortment.routes.js';
-import colorRoutes from './routes/color.routes.js';
+    deleteProduct
+} from './_controllers/productController.js';
+import authRoutes from './_routes/auth.routes.js';
+import collectionRoutes from './_routes/collection.routes.js';
+import orderRoutes from './_routes/order.routes.js';
+import assortmentRoutes from './_routes/assortment.routes.js';
+import colorRoutes from './_routes/color.routes.js';
 
 const app = express();
 
