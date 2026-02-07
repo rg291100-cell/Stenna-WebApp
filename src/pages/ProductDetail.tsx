@@ -211,7 +211,7 @@ export const ProductDetail: React.FC = () => {
           </h1>
 
           <p className="text-xl text-gray-600 mt-2">
-            ${Number(product.price)} / roll
+            ₹{Number(product.price)} / roll
           </p>
 
           <p className="mt-6 text-sm text-gray-500 italic">

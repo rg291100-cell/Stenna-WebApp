@@ -51,7 +51,7 @@ export const ProductList: React.FC = () => {
                         </div>
                         <div className="col-span-4 font-serif">{p.name}</div>
                         <div className="col-span-2 text-xs text-gray-500">{p.sku}</div>
-                        <div className="col-span-2 text-xs font-bold">${Number(p.price)}</div>
+                        <div className="col-span-2 text-xs font-bold">₹{Number(p.price)}</div>
                         <div className="col-span-2 text-[10px] uppercase">{p.category}</div>
                         <div className="col-span-1 flex justify-end gap-4">
                             <Link to={`/admin/products/${p.id}/edit`} className="text-gray-400 hover:text-black">
