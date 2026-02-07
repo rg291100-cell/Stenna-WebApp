@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
       "dev": "vite",
-      "build": "npm run build:api && vite build",
+      "build": "vite build",
       "build:api": "tsc -p tsconfig.api.json"
     },
     "dependencies": {
