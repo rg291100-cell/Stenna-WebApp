@@ -6,7 +6,6 @@ import {
     createProduct,
     updateProduct,
     deleteProduct
-    deleteProduct
 } from './_controllers/productController.js';
 import authRoutes from './_routes/auth.routes.js';
 import collectionRoutes from './_routes/collection.routes.js';
